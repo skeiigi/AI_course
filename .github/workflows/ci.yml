@@ -15,11 +15,11 @@ on:
     branches: [main]
     paths:
       - 'booking-reference/**'
-      - '.github/workflows/booking-reference-ci.yml'
+      - '.github/workflows/ci.yml'
   pull_request:
     paths:
       - 'booking-reference/**'
-      - '.github/workflows/booking-reference-ci.yml'
+      - '.github/workflows/ci.yml'
 
 env:
   NODE_VERSION: "22"
