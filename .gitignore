@@ -1,0 +1,47 @@
+# Зависимости
+node_modules/
+.pnp/
+.pnp.js
+
+# Сборка
+dist/
+build/
+out/
+*.tsbuildinfo
+.next/
+.nuxt/
+
+# Переменные окружения и секреты
+.env
+.env.local
+.env.*.local
+
+# Логи
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# IDE и ОС
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+
+# Кэши
+.cache/
+.parcel-cache/
+.eslintcache
+.coverage/
+coverage/
+
+# Прочее
+*.local
+*.pid
+*.seed
+*.pid.lock

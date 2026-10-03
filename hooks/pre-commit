@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+# pre-commit: прогоняет typecheck (+test для server, +build для contract)
+# только по тем workspace, которые реально затронуты staged-файлами.
+#
+# Можно пропустить, если очень нужно: git commit --no-verify
+
+set -euo pipefail
+
+# Подключаем общие утилиты. Хуки git вызываются из .git/hooks/<имя>,
+# поэтому резолвим путь относительно $0, который указывает на файл в
+# .git/hooks/, а не на исходник. Скрипт install.sh копирует файлы как есть,
+# поэтому $0 совпадает с целевым, и мы ищем shared/ рядом.
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck source=shared/git-helpers.sh
+. "$SCRIPT_DIR/shared/git-helpers.sh"
+
+log_info "pre-commit: проверяю staged-файлы…"
+
+mapfile -t WORKSPACES < <(detect_workspaces)
+log_info "затронутые workspace: ${WORKSPACES[*]:-<нет>}"
+
+if [[ ${#WORKSPACES[@]} -eq 0 ]]; then
+  log_warn "не удалось определить workspace — ничего не делаю."
+  exit 0
+fi
+
+EXIT=0
+
+for ws in "${WORKSPACES[@]}"; do
+  case "$ws" in
+    server)
+      run_in_workspace server typecheck || EXIT=1
+      # тесты могут требовать работающую БД/SQLite — прогоняем, это unit/integration на Vitest
+      run_in_workspace server test      || EXIT=1
+      ;;
+    web)
+      run_in_workspace web typecheck   || EXIT=1
+      ;;
+    contract)
+      run_in_workspace contract build  || EXIT=1
+      ;;
+    e2e)
+      run_in_workspace e2e typecheck   || EXIT=1
+      ;;
+    *)
+      log_warn "неизвестный workspace '$ws' — пропускаю."
+      ;;
+  esac
+done
+
+if [[ $EXIT -ne 0 ]]; then
+  fail "pre-commit: один или несколько шагов провалились. Коммит отменён."
+fi
+
+log_ok "pre-commit: всё OK."

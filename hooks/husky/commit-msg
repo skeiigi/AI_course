@@ -1,0 +1,5 @@
+#!/usr/bin/env sh
+# Husky-совместимая обёртка над hooks/commit-msg.
+# См. комментарий в husky/pre-commit.
+
+exec "$(dirname "$0")/../hooks/commit-msg" "$@"

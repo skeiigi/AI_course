@@ -1,0 +1,6 @@
+{
+  "name": "legacy-report",
+  "private": true,
+  "type": "commonjs",
+  "description": "Исходная версия отчёта. Остров CommonJS внутри проекта на модулях ES"
+}

@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Бронирование тайм-слотов</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar__inner">
+    <div class="topbar__title">Бронирование тайм-слотов</div>
+    <div class="topbar__note">Учебный проект курса «ИИ для разработчиков», СФУ</div>
+  </div>
+</header>
+
+<main class="layout">
+
+  <aside class="sidebar">
+
+    <section class="card">
+      <h2 class="card__title">Вид активности</h2>
+      <div id="activity-list" class="activity-list">
+        <p class="hint">Загружаю список.</p>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2 class="card__title">Бронирование</h2>
+      <p class="hint" id="booking-hint">Выберите свободный слот в сетке справа.</p>
+      <form id="booking-form" class="form" hidden>
+        <div class="chosen" id="chosen-slot"></div>
+        <label class="field">
+          <span class="field__label">Имя гостя</span>
+          <input class="field__input" id="guest-name" type="text" maxlength="100" required>
+        </label>
+        <label class="field">
+          <span class="field__label">Почта</span>
+          <input class="field__input" id="guest-email" type="email" required>
+        </label>
+        <div class="form__buttons">
+          <button class="button button--primary" type="submit">Забронировать</button>
+          <button class="button button--ghost" type="button" id="clear-choice">Сбросить</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="card">
+      <h2 class="card__title">Мои брони</h2>
+      <form id="lookup-form" class="form">
+        <label class="field">
+          <span class="field__label">Почта, на которую бронировали</span>
+          <input class="field__input" id="lookup-email" type="email" required>
+        </label>
+        <button class="button button--secondary" type="submit">Показать брони</button>
+      </form>
+      <ul id="booking-list" class="booking-list"></ul>
+    </section>
+
+  </aside>
+
+  <section class="content">
+
+    <div id="message" class="message" hidden></div>
+
+    <div class="weekbar">
+      <button class="button button--ghost" id="prev-week" type="button">Назад</button>
+      <div class="weekbar__range" id="week-range"></div>
+      <button class="button button--ghost" id="next-week" type="button">Вперёд</button>
+    </div>
+
+    <div class="legend">
+      <span class="legend__item"><span class="legend__box legend__box--free"></span>свободно</span>
+      <span class="legend__item"><span class="legend__box legend__box--busy"></span>занято</span>
+      <span class="legend__item"><span class="legend__box legend__box--picked"></span>выбрано</span>
+    </div>
+
+    <div id="slot-grid" class="slot-grid">
+      <p class="hint">Выберите активность слева.</p>
+    </div>
+
+  </section>
+
+</main>
+
+<footer class="footer">
+  Документация API: <a href="/docs">/docs</a> · Схема OpenAPI: <a href="/openapi.json">/openapi.json</a>
+</footer>
+
+<script src="/static/app.js"></script>
+</body>
+</html>

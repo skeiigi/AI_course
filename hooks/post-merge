@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+# post-merge: авто-установка зависимостей, если в pull/merge
+# изменились манифесты пакетов.
+#
+# Аргумент (передаётся git автоматически):
+#   $1 — "1" если это merge commit / pull, "0" иначе. Нам интересен merge.
+#
+# Пропустить нельзя (post-* хукн не имеют --no-verify), но можно
+# выставить HOOK_SKIP_INSTALL=1 в окружении.
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck source=shared/git-helpers.sh
+. "$SCRIPT_DIR/shared/git-helpers.sh"
+
+# Если пользователь явно попросил — не мешаем
+if [[ "${HOOK_SKIP_INSTALL:-0}" == "1" ]]; then
+  log_info "post-merge: HOOK_SKIP_INSTALL=1, пропускаю."
+  exit 0
+fi
+
+# 1 = squash/true merge. 0 = fast-forward/rebase/что-то ещё.
+IS_MERGE="${1:-0}"
+if [[ "$IS_MERGE" != "1" ]]; then
+  exit 0
+fi
+
+# diff-tree против первого родителя: если среди изменений есть манифесты —
+# запускаем install. HEAD@{1} здесь надёжнее, чем origin/HEAD, потому что
+# post-merge срабатывает до того, как fetch обновит remote-ссылки.
+CHANGED=$(git diff-tree -r --name-only --no-commit-id ORIG_HEAD HEAD 2>/dev/null || true)
+
+if ! printf '%s\n' "$CHANGED" | manifest_changed; then
+  log_info "post-merge: манифесты пакетов не менялись — пропускаю."
+  exit 0
+fi
+
+# Обнаружить менеджер пакетов
+if [[ -f bun.lockb ]] && command -v bun >/dev/null 2>&1; then
+  log_section "post-merge: bun install"
+  bun install
+elif [[ -f pnpm-lock.yaml ]] && command -v pnpm >/dev/null 2>&1; then
+  log_section "post-merge: pnpm install"
+  pnpm install --frozen-lockfile
+elif [[ -f yarn.lock ]] && command -v yarn >/dev/null 2>&1; then
+  log_section "post-merge: yarn install --frozen-lockfile"
+  yarn install --frozen-lockfile
+elif [[ -f package-lock.json ]] && command -v npm >/dev/null 2>&1; then
+  log_section "post-merge: npm ci"
+  npm ci
+elif command -v npm >/dev/null 2>&1; then
+  log_section "post-merge: npm install (fallback)"
+  npm install
+else
+  log_warn "post-merge: манифесты изменились, но ни npm/yarn/pnpm/bun не найден — установи зависимости вручную."
+  exit 2
+fi
+
+log_ok "post-merge: зависимости обновлены."

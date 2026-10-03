@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+# commit-msg: проверяет формат Conventional Commits.
+#   <type>(<optional-scope>)<optional!>: <subject>
+#   feat: add booking endpoint
+#   fix(server): handle SQLite lock
+#   docs!: drop legacy v1 routes
+#   chore(contract): regenerate openapi
+#
+# Допустимые type: feat, fix, docs, style, refactor, perf, test, build,
+# ci, chore, revert. Допускается BREAKING CHANGE в теле сообщения.
+#
+# Можно пропустить: git commit --no-verify -m "..."
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck source=shared/git-helpers.sh
+. "$SCRIPT_DIR/shared/git-helpers.sh"
+
+MSG_FILE="${1:-}"
+if [[ -z "$MSG_FILE" || ! -f "$MSG_FILE" ]]; then
+  fail "commit-msg: не передан путь к файлу сообщения."
+fi
+
+# Берём только subject (первую непустую строку), убираем возможные комментарии #.
+SUBJECT=$(grep -m1 -vE '^\s*#' "$MSG_FILE" | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//')
+
+if [[ -z "$SUBJECT" ]]; then
+  fail "commit-msg: пустое сообщение коммита."
+fi
+
+# Отбрасываем мердж- и реверт-коммиты автоматической формы.
+if [[ "$SUBJECT" =~ ^Merge[[:space:]] ]] \
+   || [[ "$SUBJECT" =~ ^Revert[[:space:]] ]] \
+   || [[ "$SUBJECT" =~ ^fixup! ]] \
+   || [[ "$SUBJECT" =~ ^squash! ]]; then
+  log_info "commit-msg: служебное сообщение '$SUBJECT' — пропускаю проверку."
+  exit 0
+fi
+
+# Conventional Commits
+PATTERN='^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-z0-9_-]+\))?(!)?: .+'
+
+if [[ ! "$SUBJECT" =~ $PATTERN ]]; then
+  cat >&2 <<'EOF'
+[hook] commit-msg: неверный формат сообщения.
+
+Ожидается Conventional Commits:
+  <type>(<scope>)?(!)?: <subject>
+
+  type     — feat | fix | docs | style | refactor | perf | test
+             | build | ci | chore | revert
+  scope    — необязательно, обычно имя workspace: server, web, contract, e2e
+  !        — маркер breaking change (или 'BREAKING CHANGE:' в теле)
+  subject  — кратко, в нижнем регистре, без точки в конце
+
+Примеры:
+  feat(server): add /bookings POST endpoint
+  fix(web): prevent double submit on booking form
+  docs(contract): regenerate openapi
+  refactor!: drop legacy v1 routes
+EOF
+  fail "получено: '$SUBJECT'"
+fi
+
+log_ok "commit-msg: '$SUBJECT' — OK."

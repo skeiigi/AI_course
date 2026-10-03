@@ -1,0 +1,20 @@
+# Поднять сервис одной командой:
+#     docker compose up -d --build
+# Интерфейс откроется по адресу http://localhost:8000
+
+services:
+  api:
+    build: .
+    container_name: booking-reference
+    ports:
+      - "8000:8000"
+    environment:
+      # База лежит в отдельном томе, поэтому брони не теряются при перезапуске.
+      BOOKING_DB_FILE: /data/booking.db
+    volumes:
+      - booking-data:/data
+    # Сначала наполняем базу демонстрационными данными, потом запускаем сервер.
+    command: sh -c "python seed.py && uvicorn app.main:app --host 0.0.0.0 --port 8000"
+
+volumes:
+  booking-data:

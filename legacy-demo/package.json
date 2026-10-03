@@ -1,0 +1,25 @@
+{
+  "name": "legacy-demo",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Учебный проект модуля 7 курса «ИИ для разработчиков»: миграция плохого JavaScript на TypeScript",
+  "engines": {
+    "node": ">=22.12 <23"
+  },
+  "scripts": {
+    "legacy": "node legacy/report.js",
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "after": "npm run build && node after/dist/main.js",
+    "test": "npm run build && vitest run",
+    "test:characterization": "vitest run tests/characterization",
+    "test:after": "npm run build && vitest run after/tests",
+    "compare": "npm run build && node compare.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.1",
+    "typescript": "5.9.3",
+    "vitest": "5.0.1"
+  }
+}

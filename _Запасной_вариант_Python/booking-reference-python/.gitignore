@@ -1,0 +1,19 @@
+# Виртуальное окружение
+.venv/
+venv/
+
+# Кеши Python
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+
+# База данных создаётся при запуске, в репозитории её быть не должно
+booking.db
+
+# Зависимости TypeSpec ставятся командой npm install
+contract/node_modules/
+
+# Локальные настройки редакторов
+.vscode/
+.idea/

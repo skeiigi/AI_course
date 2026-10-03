@@ -1,0 +1,17 @@
+{
+  "name": "booking-e2e",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Сквозные тесты Playwright",
+  "scripts": {
+    "test": "playwright test",
+    "report": "playwright show-report",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.56.0",
+    "@types/node": "22.20.1",
+    "typescript": "5.9.3"
+  }
+}

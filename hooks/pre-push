@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+# pre-push: последний рубеж перед отправкой на сервер.
+#   * полный typecheck по всем workspace (даже если правки были локальные)
+#   * опционально — e2e (по переменной HOOK_RUN_E2E=1)
+#
+# Пропустить: git push --no-verify
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck source=shared/git-helpers.sh
+. "$SCRIPT_DIR/shared/git-helpers.sh"
+
+log_info "pre-push: полный typecheck по всем workspace…"
+
+EXIT=0
+run_in_workspace server   typecheck || EXIT=1
+run_in_workspace web      typecheck || EXIT=1
+run_in_workspace contract build     || EXIT=1
+run_in_workspace e2e      typecheck || EXIT=1
+
+# Контракт — критичная часть монорепо: если собран не самый свежий,
+# сервер/web могут разойтись с openapi. Сборка уже запущена выше.
+
+if [[ "${HOOK_RUN_E2E:-0}" == "1" ]]; then
+  log_warn "HOOK_RUN_E2E=1: запускаю Playwright e2e (это долго)..."
+  log_section "e2e :: test"
+  if npm run --workspace e2e --silent test; then
+    log_ok "e2e :: test — OK"
+  else
+    log_error "e2e :: test — FAIL"
+    EXIT=1
+  fi
+else
+  log_info "пропускаю e2e (запустите вручную или задайте HOOK_RUN_E2E=1)."
+fi
+
+if [[ $EXIT -ne 0 ]]; then
+  fail "pre-push: проверки не прошли. Push отменён."
+fi
+
+log_ok "pre-push: всё OK."

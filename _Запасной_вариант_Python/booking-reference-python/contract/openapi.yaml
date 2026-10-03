@@ -1,0 +1,522 @@
+openapi: 3.1.0
+info:
+  title: Сервис бронирования тайм-слотов
+  version: 1.0.0
+  description: Учебный сервис бронирования по типу Calendly. Курс «ИИ для разработчиков», СФУ.
+tags:
+  - name: activities
+  - name: schedules
+  - name: slots
+  - name: bookings
+paths:
+  /api/activities:
+    get:
+      operationId: Activities_list
+      description: Список всех видов активности.
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Activity'
+      tags:
+        - activities
+    post:
+      operationId: Activities_create
+      description: Создать новый вид активности.
+      parameters: []
+      responses:
+        '201':
+          description: The request has succeeded and a new resource has been created as a result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Activity'
+        '422':
+          description: Данные синтаксически верны, но нарушают правила предметной области.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+      tags:
+        - activities
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActivityCreate'
+  /api/bookings:
+    get:
+      operationId: Bookings_list
+      description: Список броней, новые сверху. Можно отфильтровать по почте гостя.
+      parameters:
+        - name: guest_email
+          in: query
+          required: false
+          schema:
+            type: string
+          explode: false
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Booking'
+      tags:
+        - bookings
+    post:
+      operationId: Bookings_create
+      description: Создать бронь на свободный слот.
+      parameters: []
+      responses:
+        '201':
+          description: The request has succeeded and a new resource has been created as a result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Booking'
+        '404':
+          description: Запрошенный объект не найден.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '409':
+          description: Действие противоречит текущему состоянию данных.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '422':
+          description: Данные синтаксически верны, но нарушают правила предметной области.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+      tags:
+        - bookings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookingCreate'
+  /api/bookings/{booking_id}/cancel:
+    post:
+      operationId: Bookings_cancel
+      description: Отменить бронь. После отмены слот снова свободен.
+      parameters:
+        - name: booking_id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Booking'
+        '404':
+          description: Запрошенный объект не найден.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '409':
+          description: Действие противоречит текущему состоянию данных.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+      tags:
+        - bookings
+  /api/schedules:
+    get:
+      operationId: Schedules_list
+      description: Список расписаний. Можно отфильтровать по активности.
+      parameters:
+        - name: activity_id
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+          explode: false
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Schedule'
+      tags:
+        - schedules
+    post:
+      operationId: Schedules_create
+      description: Создать расписание для активности.
+      parameters: []
+      responses:
+        '201':
+          description: The request has succeeded and a new resource has been created as a result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Schedule'
+        '404':
+          description: Запрошенный объект не найден.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '422':
+          description: Данные синтаксически верны, но нарушают правила предметной области.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+      tags:
+        - schedules
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScheduleCreate'
+  /api/slots:
+    get:
+      operationId: Slots_list
+      description: Свободные и занятые слоты активности на диапазон дат.
+      parameters:
+        - name: activity_id
+          in: query
+          required: true
+          schema:
+            type: integer
+            format: int32
+          explode: false
+        - name: date_from
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+          explode: false
+        - name: date_to
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+          explode: false
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Slot'
+        '404':
+          description: Запрошенный объект не найден.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '422':
+          description: Данные синтаксически верны, но нарушают правила предметной области.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+      tags:
+        - slots
+components:
+  schemas:
+    Activity:
+      type: object
+      required:
+        - id
+        - name
+        - duration_minutes
+        - description
+        - color
+      properties:
+        id:
+          type: integer
+          format: int32
+          description: Идентификатор активности.
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: Название, например «Консультация».
+        duration_minutes:
+          type: integer
+          format: int32
+          minimum: 5
+          maximum: 480
+          description: Длительность одной встречи в минутах.
+        description:
+          type: string
+          maxLength: 500
+          description: Описание для гостя.
+        color:
+          type: string
+          pattern: ^#[0-9a-fA-F]{6}$
+          description: 'Цвет карточки в интерфейсе, шестнадцатеричный код вида #3b5bdb.'
+      description: 'Вид активности: то, на что записывается гость.'
+    ActivityCreate:
+      type: object
+      required:
+        - name
+        - duration_minutes
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        duration_minutes:
+          type: integer
+          format: int32
+          minimum: 5
+          maximum: 480
+        description:
+          type: string
+          maxLength: 500
+          default: ''
+        color:
+          type: string
+          pattern: ^#[0-9a-fA-F]{6}$
+          default: '#3b5bdb'
+      description: Данные для создания активности.
+    Booking:
+      type: object
+      required:
+        - id
+        - activity_id
+        - activity_name
+        - date
+        - start_time
+        - end_time
+        - guest_name
+        - guest_email
+        - status
+        - created_at
+      properties:
+        id:
+          type: integer
+          format: int32
+          description: Идентификатор брони.
+        activity_id:
+          type: integer
+          format: int32
+          description: Активность.
+        activity_name:
+          type: string
+          description: Название активности на момент запроса, чтобы клиенту хватило одного запроса.
+        date:
+          type: string
+          format: date
+          description: Дата слота.
+        start_time:
+          type: string
+          format: time
+          description: Начало слота.
+        end_time:
+          type: string
+          format: time
+          description: Конец слота.
+        guest_name:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: Имя гостя.
+        guest_email:
+          type: string
+          format: email
+          description: Почта гостя. По ней гость находит свои брони, учётной записи у него нет.
+        status:
+          $ref: '#/components/schemas/BookingStatus'
+          description: Статус брони.
+        created_at:
+          type: string
+          format: date-time
+          description: Момент создания брони в UTC.
+      description: Бронь гостя на конкретный слот.
+    BookingCreate:
+      type: object
+      required:
+        - activity_id
+        - date
+        - start_time
+        - guest_name
+        - guest_email
+      properties:
+        activity_id:
+          type: integer
+          format: int32
+        date:
+          type: string
+          format: date
+        start_time:
+          type: string
+          format: time
+        guest_name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        guest_email:
+          type: string
+          format: email
+      description: Данные для создания брони.
+    BookingStatus:
+      type: string
+      enum:
+        - active
+        - cancelled
+      description: Статус брони.
+    ErrorBody:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          $ref: '#/components/schemas/ErrorCode'
+          description: Код ошибки для кода клиента.
+        message:
+          type: string
+          description: Сообщение на русском языке для показа пользователю.
+      description: Общее тело ответа при любой ошибке сервиса.
+    ErrorCode:
+      type: string
+      enum:
+        - validation_failed
+        - activity_not_found
+        - booking_not_found
+        - slot_not_found
+        - slot_taken
+        - booking_already_cancelled
+        - invalid_time_window
+        - invalid_date_range
+      description: Машиночитаемый код ошибки. Клиент опирается на код, человек читает message.
+    Schedule:
+      type: object
+      required:
+        - id
+        - activity_id
+        - weekdays
+        - start_time
+        - end_time
+        - step_minutes
+      properties:
+        id:
+          type: integer
+          format: int32
+          description: Идентификатор расписания.
+        activity_id:
+          type: integer
+          format: int32
+          description: Активность, к которой относится расписание.
+        weekdays:
+          type: array
+          items:
+            type: integer
+            format: int32
+          minItems: 1
+          maxItems: 7
+          description: 'Дни недели: 1 это понедельник, 7 это воскресенье.'
+        start_time:
+          type: string
+          format: time
+          description: Начало рабочего окна, формат HH:MM:SS.
+        end_time:
+          type: string
+          format: time
+          description: Конец рабочего окна, формат HH:MM:SS.
+        step_minutes:
+          type: integer
+          format: int32
+          minimum: 5
+          maximum: 480
+          description: Шаг сетки слотов в минутах.
+      description: 'Расписание: в какие дни и часы доступна активность.'
+    ScheduleCreate:
+      type: object
+      required:
+        - activity_id
+        - weekdays
+        - start_time
+        - end_time
+        - step_minutes
+      properties:
+        activity_id:
+          type: integer
+          format: int32
+        weekdays:
+          type: array
+          items:
+            type: integer
+            format: int32
+          minItems: 1
+          maxItems: 7
+        start_time:
+          type: string
+          format: time
+        end_time:
+          type: string
+          format: time
+        step_minutes:
+          type: integer
+          format: int32
+          minimum: 5
+          maximum: 480
+      description: Данные для создания расписания.
+    Slot:
+      type: object
+      required:
+        - activity_id
+        - schedule_id
+        - date
+        - start_time
+        - end_time
+        - is_free
+      properties:
+        activity_id:
+          type: integer
+          format: int32
+          description: Активность, к которой относится слот.
+        schedule_id:
+          type: integer
+          format: int32
+          description: Расписание, из которого получен слот.
+        date:
+          type: string
+          format: date
+          description: Дата слота, формат YYYY-MM-DD.
+        start_time:
+          type: string
+          format: time
+          description: Начало слота.
+        end_time:
+          type: string
+          format: time
+          description: Конец слота, равен началу плюс длительность активности.
+        is_free:
+          type: boolean
+          description: Свободен ли слот. Занятый слот забронировать нельзя.
+      description: Тайм-слот. В базе не хранится, вычисляется из расписания на дату.

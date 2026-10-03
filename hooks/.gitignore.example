@@ -1,0 +1,55 @@
+# Скопируйте это в корень монорепо booking-reference/.gitignore
+# (или запустите install — этот файл будет подсказкой)
+
+# Зависимости
+node_modules/
+**/node_modules/
+
+# Сборка
+**/dist/
+**/build/
+**/.next/
+**/.vite/
+
+# TypeSpec / OpenAPI
+contract/**/tsp-output/
+contract/**/openapi.yaml
+contract/**/openapi.json
+contract/**/generated/
+
+# Тесты и отчёты
+coverage/
+**/coverage/
+**/playwright-report/
+**/test-results/
+**/playwright/.cache/
+
+# SQLite и локальные данные
+*.db
+*.db-journal
+*.sqlite
+*.sqlite-journal
+data/
+**/data/*.db
+
+# Переменные окружения и секреты
+.env
+.env.*
+!.env.example
+
+# Логи
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# IDE и ОС
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Скомпилированный «после» в legacy-demo
+legacy-demo/after/dist/
+legacy-demo/legacy/dist/

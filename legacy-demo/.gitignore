@@ -1,0 +1,4 @@
+node_modules/
+after/dist/
+out/
+*.tsbuildinfo

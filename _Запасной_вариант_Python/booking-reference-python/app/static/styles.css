@@ -1,0 +1,472 @@
+/* Стили интерфейса бронирования.
+   Внешних шрифтов и библиотек нет: всё работает без интернета.
+   Цвета взяты из фирменной палитры курса. */
+
+:root {
+  --navy: #0F2A4A;
+  --accent: #1E5BA8;
+  --accent-dark: #17457F;
+  --accent-soft: #E8EFF9;
+  --page: #F4F6FA;
+  --card: #FFFFFF;
+  --border: #DBE2EC;
+  --text: #1B2733;
+  --muted: #62718A;
+  --busy: #EDF0F5;
+  --busy-text: #97A2B4;
+  --error-bg: #FDECEA;
+  --error-text: #A32B21;
+  --ok-bg: #E8F5EE;
+  --ok-text: #1B6E45;
+  --radius: 8px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+body {
+  margin: 0;
+  background: var(--page);
+  color: var(--text);
+  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+/* ---------- Шапка ---------- */
+
+.topbar {
+  background: var(--navy);
+  color: #FFFFFF;
+  padding: 18px 0;
+}
+
+.topbar__inner {
+  max-width: 1340px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+.topbar__title {
+  font-size: 21px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+}
+
+.topbar__note {
+  margin-top: 4px;
+  font-size: 13px;
+  color: #A9BCD4;
+}
+
+/* ---------- Общая сетка страницы ---------- */
+
+.layout {
+  max-width: 1340px;
+  margin: 0 auto;
+  padding: 24px;
+  display: grid;
+  grid-template-columns: 320px minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.sidebar {
+  display: grid;
+  gap: 16px;
+}
+
+.content {
+  display: grid;
+  gap: 16px;
+}
+
+/* ---------- Карточки ---------- */
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+}
+
+.card__title {
+  margin: 0 0 12px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--navy);
+}
+
+.hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+/* ---------- Список активностей ---------- */
+
+.activity-list {
+  display: grid;
+  gap: 8px;
+}
+
+.activity {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: #FFFFFF;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+
+.activity:hover {
+  border-color: var(--accent);
+}
+
+.activity--picked {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.activity__name {
+  font-weight: 600;
+  color: var(--navy);
+}
+
+.activity__meta {
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* ---------- Формы ---------- */
+
+.form {
+  display: grid;
+  gap: 12px;
+}
+
+.field {
+  display: grid;
+  gap: 4px;
+}
+
+.field__label {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.field__input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font: inherit;
+  color: inherit;
+  background: #FFFFFF;
+}
+
+.field__input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 0;
+  border-color: var(--accent);
+}
+
+.form__buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.button {
+  padding: 8px 14px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.button--primary {
+  background: var(--accent);
+  color: #FFFFFF;
+}
+
+.button--primary:hover {
+  background: var(--accent-dark);
+}
+
+.button--secondary {
+  background: var(--navy);
+  color: #FFFFFF;
+}
+
+.button--ghost {
+  background: #FFFFFF;
+  border-color: var(--border);
+  color: var(--navy);
+}
+
+.button--ghost:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.chosen {
+  background: var(--accent-soft);
+  border: 1px solid #C3D6EE;
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 13px;
+  color: var(--navy);
+}
+
+/* ---------- Панель недели и легенда ---------- */
+
+.weekbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+}
+
+.weekbar__range {
+  font-weight: 600;
+  color: var(--navy);
+}
+
+.legend {
+  display: flex;
+  gap: 18px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.legend__item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legend__box {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+}
+
+.legend__box--free {
+  background: #FFFFFF;
+}
+
+.legend__box--busy {
+  background: var(--busy);
+  border-color: var(--busy-text);
+}
+
+.legend__box--picked {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+/* ---------- Сетка слотов ---------- */
+
+.slot-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.day {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 180px;
+}
+
+/* День без слотов не растягиваем на всю высоту сетки. */
+.day--off {
+  align-self: start;
+  min-height: 0;
+}
+
+.day--off .day__head {
+  background: #F7F9FC;
+  color: var(--muted);
+}
+
+.day__head {
+  background: var(--navy);
+  color: #FFFFFF;
+  padding: 8px 10px;
+  text-align: center;
+}
+
+.day__weekday {
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.day__date {
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+.day__slots {
+  padding: 10px;
+  display: grid;
+  gap: 6px;
+  align-content: start;
+}
+
+.day__empty {
+  padding: 14px 10px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.slot {
+  width: 100%;
+  padding: 7px 4px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #FFFFFF;
+  color: var(--navy);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: center;
+}
+
+.slot:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.slot--busy,
+.slot--busy:hover {
+  background: var(--busy);
+  color: var(--busy-text);
+  border-color: var(--busy);
+  cursor: not-allowed;
+}
+
+/* Выбранный слот остаётся читаемым и под курсором мыши. */
+.slot--picked,
+.slot--picked:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #FFFFFF;
+}
+
+/* ---------- Сообщения ---------- */
+
+.message {
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  font-size: 13px;
+  border: 1px solid transparent;
+}
+
+.message--error {
+  background: var(--error-bg);
+  color: var(--error-text);
+  border-color: #F1C4BF;
+}
+
+.message--ok {
+  background: var(--ok-bg);
+  color: var(--ok-text);
+  border-color: #BEE0CD;
+}
+
+/* ---------- Список броней ---------- */
+
+.booking-list {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.booking {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px;
+}
+
+.booking__when {
+  font-weight: 600;
+  color: var(--navy);
+}
+
+.booking__meta {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.booking__status {
+  display: inline-block;
+  margin-top: 6px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  background: var(--ok-bg);
+  color: var(--ok-text);
+}
+
+.booking__status--cancelled {
+  background: var(--busy);
+  color: var(--busy-text);
+}
+
+.booking__cancel {
+  margin-top: 8px;
+  padding: 5px 10px;
+  font-size: 12px;
+}
+
+/* ---------- Подвал ---------- */
+
+.footer {
+  max-width: 1340px;
+  margin: 0 auto;
+  padding: 8px 24px 28px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.footer a {
+  color: var(--accent);
+}
+
+/* ---------- Узкие экраны ---------- */
+
+@media (max-width: 1100px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .slot-grid {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  }
+}

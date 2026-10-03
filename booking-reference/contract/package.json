@@ -1,0 +1,15 @@
+{
+  "name": "booking-contract",
+  "version": "1.0.0",
+  "private": true,
+  "description": "TypeSpec-контракт сервиса бронирования тайм-слотов",
+  "scripts": {
+    "build": "tsp compile ."
+  },
+  "devDependencies": {
+    "@typespec/compiler": "1.15.0",
+    "@typespec/http": "1.15.0",
+    "@typespec/openapi": "1.15.0",
+    "@typespec/openapi3": "1.15.0"
+  }
+}

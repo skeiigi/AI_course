@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+# post-checkout: после `git checkout <ref>` (или после clone) —
+# подтянуть зависимости, если в новой ветке/коммите манифесты пакетов
+# отличаются от прежнего HEAD.
+#
+# Аргументы (передаются git автоматически):
+#   $1 — previous HEAD
+#   $2 — new HEAD
+#   $3 — "1" если это переключение ветки, "0" если checkout файла
+#
+# Пропустить нельзя, но можно выставить HOOK_SKIP_INSTALL=1.
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck source=shared/git-helpers.sh
+. "$SCRIPT_DIR/shared/git-helpers.sh"
+
+if [[ "${HOOK_SKIP_INSTALL:-0}" == "1" ]]; then
+  log_info "post-checkout: HOOK_SKIP_INSTALL=1, пропускаю."
+  exit 0
+fi
+
+PREV="${1:-}"
+NEW="${2:-}"
+BRANCH_FLAG="${3:-0}"
+
+# Не ветка (а файл) — не наше дело
+if [[ "$BRANCH_FLAG" != "1" ]]; then
+  exit 0
+fi
+
+# Первый checkout в репозитории (например, сразу после clone) — prev может быть пустым.
+if [[ -z "$PREV" || -z "$NEW" ]]; then
+  exit 0
+fi
+
+# Если манифесты не изменились — тихо выходим.
+CHANGED=$(git diff --name-only "$PREV" "$NEW" -- package.json package-lock.json yarn.lock pnpm-lock.yaml bun.lockb 2>/dev/null || true)
+
+if [[ -z "$CHANGED" ]]; then
+  exit 0
+fi
+
+log_info "post-checkout: манифесты изменились ($CHANGED) — запускаю установку."
+
+# Обнаружить менеджер пакетов — используем ту же логику, что и в post-merge.
+if [[ -f bun.lockb ]] && command -v bun >/dev/null 2>&1; then
+  log_section "post-checkout: bun install"
+  bun install
+elif [[ -f pnpm-lock.yaml ]] && command -v pnpm >/dev/null 2>&1; then
+  log_section "post-checkout: pnpm install"
+  pnpm install --frozen-lockfile
+elif [[ -f yarn.lock ]] && command -v yarn >/dev/null 2>&1; then
+  log_section "post-checkout: yarn install --frozen-lockfile"
+  yarn install --frozen-lockfile
+elif [[ -f package-lock.json ]] && command -v npm >/dev/null 2>&1; then
+  log_section "post-checkout: npm ci"
+  npm ci
+elif command -v npm >/dev/null 2>&1; then
+  log_section "post-checkout: npm install (fallback)"
+  npm install
+else
+  log_warn "post-checkout: манифесты изменились, но менеджер пакетов не найден."
+  exit 2
+fi
+
+log_ok "post-checkout: зависимости обновлены."

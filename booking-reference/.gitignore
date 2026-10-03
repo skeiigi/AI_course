@@ -1,0 +1,23 @@
+# Зависимости и результаты сборки
+node_modules/
+dist/
+
+# База данных SQLite вместе со служебными файлами журнала
+*.db
+*.db-wal
+*.db-shm
+
+# Отчёты Playwright
+e2e/test-results/
+e2e/playwright-report/
+
+# Служебные файлы редакторов и систем
+.DS_Store
+Thumbs.db
+.env
+.env.local
+.vscode/
+.idea/
+
+# Сгенерированный контракт НЕ игнорируется: contract/openapi.yaml
+# лежит в репозитории намеренно, смотри README.

@@ -1,0 +1,9 @@
+#!/usr/bin/env sh
+# Husky-совместимая обёртка над hooks/pre-commit.
+# Активируется, только если ты решишь поставить husky:
+#   npm install --save-dev husky
+#   npx husky install .husky
+# После этого husky сам подхватит этот файл — никаких дополнительных
+# правок не нужно.
+
+exec "$(dirname "$0")/../hooks/pre-commit" "$@"

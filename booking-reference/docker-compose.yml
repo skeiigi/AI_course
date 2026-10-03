@@ -1,0 +1,22 @@
+# Поднять сервис одной командой:
+#     docker compose up -d --build
+# Интерфейс откроется по адресу http://localhost:8000
+
+services:
+  booking:
+    build: .
+    container_name: booking-reference
+    ports:
+      - "8000:8000"
+    environment:
+      BOOKING_DB_FILE: /data/booking.db
+    volumes:
+      # Именованный том: брони не теряются при пересоздании контейнера.
+      - booking-data:/data # открыть Docker Desktop -> Volumes и найти наш volume
+    # Сначала наполняем базу демонстрационными данными, потом запускаем сервис.
+    # Скрипт наполнения идемпотентный: на непустой базе он ничего не меняет.
+    command: sh -c "node server/dist/seed.js && node server/dist/index.js"
+    restart: unless-stopped
+
+volumes:
+  booking-data:
