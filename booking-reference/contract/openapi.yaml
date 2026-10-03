@@ -253,7 +253,6 @@ components:
         - name
         - duration_minutes
         - description
-        - location
         - color
       properties:
         id:
@@ -278,7 +277,8 @@ components:
         location:
           type: string
           maxLength: 200
-          description: Место проведения или ссылка на видеовстречу.
+          description: Место проведения или ссылка на видеовстречу. Необязательное.
+          default: ''
         color:
           type: string
           pattern: ^#[0-9a-fA-F]{6}$
