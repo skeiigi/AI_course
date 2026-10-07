@@ -1,0 +1,34 @@
+name: booking-reference
+
+services:
+  booking:
+    image: booking-reference:ci
+    build:
+      context: ../..
+    command: sh -c "node server/dist/seed.js && node server/dist/index.js"
+    environment:
+      BOOKING_DB_FILE: /data/booking.db
+    volumes:
+      - booking-data:/data
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2-alpine
+    depends_on:
+      booking:
+        condition: service_healthy
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      BOOKING_DOMAIN: ${BOOKING_DOMAIN:?Укажите BOOKING_DOMAIN в deploy/cloudru/.env}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    restart: unless-stopped
+
+volumes:
+  booking-data:
+  caddy-data:
+  caddy-config:

@@ -96,6 +96,22 @@ describe('POST /api/schedules', () => {
     expect(response.json().code).toBe('invalid_time_window');
   });
 
+  it('сравнивает рабочее окно с точностью до секунды', async () => {
+    const activity = await createActivity(app);
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/schedules',
+      payload: {
+        activity_id: activity.id,
+        weekdays: [1],
+        start_time: '10:00:30',
+        end_time: '10:00:31',
+        step_minutes: 30,
+      },
+    });
+    expect(response.statusCode).toBe(201);
+  });
+
   it('не принимает пустой список дней недели', async () => {
     const activity = await createActivity(app);
     const response = await app.inject({

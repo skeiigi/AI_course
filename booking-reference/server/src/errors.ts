@@ -13,9 +13,11 @@ export type ErrorCode =
   | 'booking_not_found'
   | 'slot_not_found'
   | 'slot_taken'
+  | 'slot_in_past'
   | 'booking_already_cancelled'
   | 'invalid_time_window'
   | 'invalid_date_range'
+  | 'chat_closed'
   | 'route_not_found'
   | 'internal_error';
 
@@ -61,11 +63,14 @@ export const errors = {
   slotNotFound: () =>
     unprocessable('slot_not_found', 'В расписании нет слота, который начинается в это время'),
   slotTaken: () => conflict('slot_taken', 'Этот слот уже забронирован'),
+  slotInPast: () =>
+    unprocessable('slot_in_past', 'Нельзя забронировать время, которое уже прошло'),
   bookingAlreadyCancelled: () =>
     conflict('booking_already_cancelled', 'Эта бронь уже отменена'),
   invalidTimeWindow: () =>
     unprocessable('invalid_time_window', 'Начало рабочего окна должно быть раньше его конца'),
   invalidDateRange: (message: string) => unprocessable('invalid_date_range', message),
+  chatClosed: () => conflict('chat_closed', 'Переписка закрыта: бронь отменена или встреча уже началась'),
 };
 
 /**

@@ -1,8 +1,9 @@
 /** Интеграционные тесты эндпоинта слотов. */
 
 import type { FastifyInstance } from 'fastify';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { addDays } from '../src/slotEngine.js';
 import type { Slot } from '../src/schemas.js';
 import { MONDAY, SATURDAY, TUESDAY, createActivityWithSchedule, createTestApp } from './helpers.js';
 
@@ -14,6 +15,7 @@ beforeEach(() => {
 
 afterEach(async () => {
   await app.close();
+  vi.restoreAllMocks();
 });
 
 async function getSlots(activityId: number, from: string, to: string) {
@@ -38,6 +40,24 @@ describe('GET /api/slots', () => {
     ]);
     expect(slots.every((slot) => slot.is_free)).toBe(true);
     expect(slots[0].activity_id).toBe(activity.id);
+  });
+
+  it('не выдаёт прошедшие слоты и сохраняет будущие слоты этого дня', async () => {
+    vi.spyOn(Date, 'now').mockReturnValue(Date.parse('2026-10-06T03:30:00Z'));
+    const activity = await createActivityWithSchedule(app);
+    const response = await getSlots(activity.id, '2026-10-06', '2026-10-06');
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json<Slot[]>().map((slot) => slot.start_time)).toEqual([
+      '11:00:00', '11:30:00',
+    ]);
+  });
+
+  it('не выдаёт слоты прошедшего дня', async () => {
+    vi.spyOn(Date, 'now').mockReturnValue(Date.parse('2026-10-06T03:30:00Z'));
+    const activity = await createActivityWithSchedule(app);
+    const response = await getSlots(activity.id, '2026-10-05', '2026-10-05');
+    expect(response.json()).toEqual([]);
   });
 
   it('в выходной день слотов нет', async () => {
@@ -73,7 +93,7 @@ describe('GET /api/slots', () => {
 
   it('отклоняет перевёрнутый диапазон дат', async () => {
     const activity = await createActivityWithSchedule(app);
-    const response = await getSlots(activity.id, '2026-10-09', MONDAY);
+    const response = await getSlots(activity.id, addDays(MONDAY, 4), MONDAY);
     expect(response.statusCode).toBe(422);
     expect(response.json().code).toBe('invalid_date_range');
   });
@@ -101,5 +121,12 @@ describe('GET /api/slots', () => {
     const response = await getSlots(activity.id, '05.10.2026', '09.10.2026');
     expect(response.statusCode).toBe(422);
     expect(response.json().message).toContain('ГГГГ-ММ-ДД');
+  });
+
+  it('отклоняет несуществующий день календаря', async () => {
+    const activity = await createActivityWithSchedule(app);
+    const response = await getSlots(activity.id, '2026-02-30', '2026-02-30');
+    expect(response.statusCode).toBe(422);
+    expect(response.json().code).toBe('validation_failed');
   });
 });

@@ -10,7 +10,7 @@
  */
 
 import type { Db } from './db.js';
-import type { Activity, ActivityCreate, Booking, Schedule, ScheduleCreate } from './schemas.js';
+import type { Activity, ActivityCreate, Booking, BookingMessage, Schedule, ScheduleCreate } from './schemas.js';
 import type { BusySlot } from './slotEngine.js';
 
 /** Строка таблицы schedules: дни недели хранятся текстом. */
@@ -74,16 +74,12 @@ export function createRepository(db: Db) {
        FROM bookings b JOIN activities a ON a.id = b.activity_id
        WHERE b.id = ?`,
     ),
-    listBookings: db.prepare<[], Booking>(
+    getAuthorizedBooking: db.prepare<[number, string], Booking>(
       `SELECT b.*, a.name AS activity_name
-       FROM bookings b JOIN activities a ON a.id = b.activity_id
-       ORDER BY b.id DESC`,
-    ),
-    listBookingsByGuest: db.prepare<[string], Booking>(
-      `SELECT b.*, a.name AS activity_name
-       FROM bookings b JOIN activities a ON a.id = b.activity_id
-       WHERE b.guest_email = ?
-       ORDER BY b.id DESC`,
+       FROM bookings b
+       JOIN activities a ON a.id = b.activity_id
+       JOIN booking_access access ON access.booking_id = b.id
+       WHERE b.id = ? AND access.token_hash = ?`,
     ),
     listBusySlots: db.prepare<[number, string, string], BusySlot>(
       `SELECT date, start_time FROM bookings
@@ -99,14 +95,51 @@ export function createRepository(db: Db) {
          (activity_id, date, start_time, end_time, guest_name, guest_email, status, created_at)
        VALUES (?, ?, ?, ?, ?, ?, '${ACTIVE}', ?)`,
     ),
+    insertBookingAccess: db.prepare<[number, string]>(
+      'INSERT INTO booking_access (booking_id, token_hash) VALUES (?, ?)',
+    ),
+    issueLegacyAccess: db.prepare<[number, string]>(
+      `INSERT INTO booking_access (booking_id, token_hash) VALUES (?, ?)
+       ON CONFLICT (booking_id) DO NOTHING`,
+    ),
     cancelBooking: db.prepare<[number]>(
       `UPDATE bookings SET status = '${CANCELLED}' WHERE id = ?`,
+    ),
+    listBookingMessages: db.prepare<[number], BookingMessage>(
+      'SELECT id, booking_id, sender_name, body, created_at FROM booking_messages WHERE booking_id = ? ORDER BY id',
+    ),
+    insertBookingMessage: db.prepare<[number, string, string, string]>(
+      'INSERT INTO booking_messages (booking_id, sender_name, body, created_at) VALUES (?, ?, ?, ?)',
+    ),
+    getBookingMessage: db.prepare<[number], BookingMessage>(
+      'SELECT id, booking_id, sender_name, body, created_at FROM booking_messages WHERE id = ?',
     ),
   };
 
   function toSchedule(row: ScheduleRow): Schedule {
     return { ...row, weekdays: weekdaysFromText(row.weekdays) };
   }
+
+  function insertBookingWithAccess(input: NewBooking, tokenHash: string): Booking {
+    const result = statements.insertBooking.run(
+      input.activity_id,
+      input.date,
+      input.start_time,
+      input.end_time,
+      input.guest_name,
+      input.guest_email,
+      new Date().toISOString(),
+    );
+    const id = Number(result.lastInsertRowid);
+    statements.insertBookingAccess.run(id, tokenHash);
+    return statements.getBooking.get(id)!;
+  }
+
+  const insertOneBooking = db.transaction(insertBookingWithAccess);
+  const insertManyBookings = db.transaction(
+    (items: Array<{ input: NewBooking; tokenHash: string }>): Booking[] =>
+      items.map(({ input, tokenHash }) => insertBookingWithAccess(input, tokenHash)),
+  );
 
   return {
     listActivities(): Activity[] {
@@ -146,14 +179,30 @@ export function createRepository(db: Db) {
       return toSchedule(statements.getSchedule.get(Number(result.lastInsertRowid))!);
     },
 
-    listBookings(guestEmail?: string): Booking[] {
-      return guestEmail === undefined
-        ? statements.listBookings.all()
-        : statements.listBookingsByGuest.all(guestEmail);
-    },
-
     getBooking(id: number): Booking | null {
       return statements.getBooking.get(id) ?? null;
+    },
+
+    getAuthorizedBooking(id: number, tokenHash: string): Booking | null {
+      return statements.getAuthorizedBooking.get(id, tokenHash) ?? null;
+    },
+
+    listBookingMessages(bookingId: number): BookingMessage[] {
+      return statements.listBookingMessages.all(bookingId);
+    },
+
+    createBookingMessage(bookingId: number, senderName: string, body: string): BookingMessage {
+      const result = statements.insertBookingMessage.run(
+        bookingId, senderName, body, new Date().toISOString(),
+      );
+      return statements.getBookingMessage.get(Number(result.lastInsertRowid))!;
+    },
+
+    issueLegacyAccess(id: number, tokenHash: string): boolean {
+      if (statements.getBooking.get(id) === undefined) {
+        return false;
+      }
+      return statements.issueLegacyAccess.run(id, tokenHash).changes === 1;
     },
 
     /** Занятые слоты активности внутри диапазона дат. Нужны движку слотов. */
@@ -166,17 +215,12 @@ export function createRepository(db: Db) {
       return statements.findActiveBooking.get(activityId, date, startTime) ?? null;
     },
 
-    createBooking(input: NewBooking): Booking {
-      const result = statements.insertBooking.run(
-        input.activity_id,
-        input.date,
-        input.start_time,
-        input.end_time,
-        input.guest_name,
-        input.guest_email,
-        new Date().toISOString(),
-      );
-      return statements.getBooking.get(Number(result.lastInsertRowid))!;
+    createBooking(input: NewBooking, tokenHash: string): Booking {
+      return insertOneBooking(input, tokenHash);
+    },
+
+    createBookings(items: Array<{ input: NewBooking; tokenHash: string }>): Booking[] {
+      return insertManyBookings(items);
     },
 
     cancelBooking(id: number): Booking {

@@ -26,55 +26,41 @@
     "Helvetica Neue", Arial, "Noto Sans", sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
 
-  --bg: #f2f4f8;
-  --surface: #ffffff;
-  --surface-2: #f7f8fb;
-  --surface-3: #eef0f5;
-  --border: #dde1e9;
-  --border-strong: #c3c9d6;
+  --bg: light-dark(#f3f4ee, #101d1a);
+  --surface: light-dark(#ffffff, #1a2925);
+  --surface-2: light-dark(#f7f8f3, #20322c);
+  --surface-3: light-dark(#e9eee8, #2a3c35);
+  --border: light-dark(#dce4dc, #33473e);
+  --border-strong: light-dark(#bdcdc2, #4a6255);
 
-  --text: #12161f;
-  --text-muted: #58616f;
-  --text-faint: #878fa0;
+  --text: light-dark(#18342f, #edf5f0);
+  --text-muted: light-dark(#536962, #b0c5ba);
+  --text-faint: light-dark(#738880, #91a99b);
 
-  --danger: #b42318;
-  --danger-soft: #fdf1f0;
-  --danger-line: #f1c9c5;
+  --danger: light-dark(#b42318, #ff8377);
+  --danger-soft: light-dark(#fdf1f0, #2a1a19);
+  --danger-line: light-dark(#f1c9c5, #4d2a26);
 
-  --ok: #15734f;
+  --ok: light-dark(#14785c, #59d1a0);
 
-  --radius-sm: 8px;
-  --radius: 12px;
-  --radius-lg: 16px;
+  --radius-sm: 11px;
+  --radius: 17px;
+  --radius-lg: 24px;
 
-  --shadow-1: 0 1px 2px rgb(16 22 34 / 6%), 0 1px 1px rgb(16 22 34 / 4%);
-  --shadow-2: 0 10px 30px -12px rgb(16 22 34 / 18%), 0 2px 6px rgb(16 22 34 / 6%);
+  --shadow-1: 0 8px 24px -20px light-dark(rgb(23 65 49 / 35%), rgb(0 0 0 / 70%)),
+    0 1px 2px light-dark(rgb(23 65 49 / 4%), rgb(0 0 0 / 40%));
+  --shadow-2: 0 20px 45px -20px light-dark(rgb(23 65 49 / 28%), rgb(0 0 0 / 80%)),
+    0 3px 10px light-dark(rgb(23 65 49 / 8%), rgb(0 0 0 / 40%));
 
   --ease: cubic-bezier(0.2, 0.7, 0.3, 1);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0c0f15;
-    --surface: #151a22;
-    --surface-2: #1a202a;
-    --surface-3: #212936;
-    --border: #262e3b;
-    --border-strong: #3a4454;
+:root[data-theme="light"] {
+  color-scheme: light;
+}
 
-    --text: #e8ecf3;
-    --text-muted: #9aa4b4;
-    --text-faint: #6f7a8b;
-
-    --danger: #ff8377;
-    --danger-soft: #2a1a19;
-    --danger-line: #4d2a26;
-
-    --ok: #59d1a0;
-
-    --shadow-1: 0 1px 2px rgb(0 0 0 / 40%);
-    --shadow-2: 0 14px 34px -14px rgb(0 0 0 / 70%), 0 2px 8px rgb(0 0 0 / 30%);
-  }
+:root[data-theme="dark"] {
+  color-scheme: dark;
 }
 
 /* 2. База и вспомогательные классы ---------------------------------------- */
@@ -83,6 +69,9 @@
 *::before,
 *::after {
   box-sizing: border-box;
+  transition-property: background-color, border-color, color, box-shadow, fill, stroke;
+  transition-duration: 0.35s;
+  transition-timing-function: var(--ease);
 }
 
 html {
@@ -118,7 +107,8 @@ ol {
 }
 
 button,
-input {
+input,
+textarea {
   font: inherit;
   color: inherit;
 }
@@ -163,26 +153,25 @@ code {
    в :root, они считались бы от значения по умолчанию и не менялись бы. */
 .app {
   --accent: #3b5bdb;
-  --accent-ink: color-mix(in oklab, var(--accent) 86%, #000 14%);
-  --accent-soft: color-mix(in oklab, var(--accent) 7%, var(--surface));
-  --accent-line: color-mix(in oklab, var(--accent) 34%, var(--border));
-  --accent-solid: var(--accent);
-  --accent-on-solid: #ffffff;
+  --accent-ink: light-dark(
+    color-mix(in oklab, var(--accent) 86%, #000 14%),
+    color-mix(in oklab, var(--accent) 48%, #fff 52%)
+  );
+  --accent-soft: light-dark(
+    color-mix(in oklab, var(--accent) 7%, var(--surface)),
+    color-mix(in oklab, var(--accent) 20%, var(--surface))
+  );
+  --accent-line: light-dark(
+    color-mix(in oklab, var(--accent) 34%, var(--border)),
+    color-mix(in oklab, var(--accent) 46%, var(--border))
+  );
+  --accent-solid: light-dark(var(--accent), color-mix(in oklab, var(--accent) 74%, #fff 26%));
+  --accent-on-solid: light-dark(#ffffff, #0b0e14);
 
   position: relative;
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
-}
-
-@media (prefers-color-scheme: dark) {
-  .app {
-    --accent-ink: color-mix(in oklab, var(--accent) 48%, #fff 52%);
-    --accent-soft: color-mix(in oklab, var(--accent) 20%, var(--surface));
-    --accent-line: color-mix(in oklab, var(--accent) 46%, var(--border));
-    --accent-solid: color-mix(in oklab, var(--accent) 74%, #fff 26%);
-    --accent-on-solid: #0b0e14;
-  }
 }
 
 /* Мягкое свечение в цвете выбранной активности. Меняется вместе с ней. */
@@ -213,6 +202,7 @@ code {
   align-items: center;
   justify-content: center;
   gap: 8px;
+  min-height: 42px;
   padding: 9px 16px;
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-sm);
@@ -266,6 +256,7 @@ code {
 }
 
 .button--small {
+  min-height: 36px;
   padding: 6px 11px;
   font-size: 13px;
 }
@@ -286,8 +277,8 @@ code {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 34px;
+  width: 42px;
+  height: 42px;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   background: var(--surface);
@@ -309,6 +300,7 @@ code {
   display: flex;
   flex-direction: column;
   gap: 5px;
+  min-width: 0;
 }
 
 .field__label {
@@ -318,6 +310,8 @@ code {
 }
 
 .field__input {
+  min-height: 44px;
+  min-width: 0;
   padding: 10px 12px;
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-sm);
@@ -355,15 +349,51 @@ code {
 /* 4. Шапка и раскладка ---------------------------------------------------- */
 
 .topbar {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 20px 28px 26px;
+  width: 100%;
+}
+
+.topbar__row {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 12px 20px;
-  max-width: 1320px;
-  margin: 0 auto;
-  padding: 22px 24px 18px;
-  width: 100%;
+  gap: 20px;
+  margin-bottom: 18px;
+}
+
+.topbar__actions {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 8px 13px;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.theme-toggle:hover {
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
+}
+
+.theme-toggle svg {
+  width: 18px;
+  height: 18px;
 }
 
 .topbar__brand {
@@ -375,17 +405,17 @@ code {
 .topbar__mark {
   display: grid;
   place-items: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 11px;
-  background: var(--accent-solid);
-  color: var(--accent-on-solid);
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: #1a4b40;
+  color: #f5fbef;
   box-shadow: var(--shadow-1);
   transition: background 0.3s var(--ease);
 }
 
 .topbar__title {
-  font-size: 21px;
+  font-size: 20px;
   font-weight: 680;
   letter-spacing: -0.015em;
   line-height: 1.15;
@@ -403,15 +433,120 @@ code {
   text-align: right;
 }
 
+.topbar__hero {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 30%;
+  min-height: 248px;
+  overflow: hidden;
+  border: 1px solid #285448;
+  border-radius: 28px;
+  background: linear-gradient(120deg, #1c5044 0%, #173d37 55%, #122f31 100%);
+  color: #f7f9ef;
+  box-shadow: 0 24px 50px -36px rgb(13 54 38 / 70%);
+}
+
+.topbar__copy {
+  position: relative;
+  z-index: 1;
+  align-self: center;
+  padding: 32px 48px 36px;
+}
+
+.topbar__eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 14px;
+  color: #bce2ca;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.topbar__eyebrow::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #b9e28e;
+  box-shadow: 0 0 0 4px rgb(185 226 142 / 14%);
+}
+
+.topbar__headline {
+  max-width: 18ch;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(34px, 4vw, 56px);
+  line-height: 1.08;
+  letter-spacing: -0.035em;
+}
+
+.topbar__description {
+  max-width: 56ch;
+  margin-top: 15px;
+  color: #d4e9dd;
+  font-size: 14px;
+}
+
+.topbar__illustration {
+  position: relative;
+  min-height: 248px;
+  overflow: hidden;
+  background: radial-gradient(circle at 50% 50%, rgb(199 234 185 / 12%), transparent 62%);
+}
+
+.topbar__orbit {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  border: 1px solid rgb(217 245 213 / 24%);
+  border-radius: 50%;
+  translate: -50% -50%;
+}
+
+.topbar__orbit--outer {
+  width: 340px;
+  height: 340px;
+}
+
+.topbar__orbit--inner {
+  width: 230px;
+  height: 230px;
+  border-color: rgb(217 245 213 / 40%);
+}
+
+.topbar__orbit-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: grid;
+  place-items: center;
+  width: 78px;
+  height: 78px;
+  border: 1px solid rgb(226 246 217 / 46%);
+  border-radius: 26px;
+  background: rgb(220 245 208 / 12%);
+  color: #d7f2bb;
+  translate: -50% -50%;
+  rotate: -10deg;
+}
+
+.topbar__orbit-center svg {
+  width: 34px;
+  height: 34px;
+  rotate: 10deg;
+}
+
 .layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 344px;
-  gap: 22px;
+  grid-template-columns: minmax(0, 1fr) 350px;
+  gap: 24px;
   align-items: start;
   width: 100%;
-  max-width: 1320px;
+  max-width: 1440px;
   margin: 0 auto;
-  padding: 0 24px 40px;
+  padding: 0 28px 48px;
   flex: 1;
 }
 
@@ -427,7 +562,7 @@ code {
   flex-direction: column;
   gap: 16px;
   position: sticky;
-  top: 18px;
+  top: 24px;
 }
 
 /* 5. Выбор активности ----------------------------------------------------- */
@@ -436,33 +571,40 @@ code {
   margin: 0;
   padding: 0;
   border: 0;
+  min-inline-size: 0;
+  min-width: 0;
 }
 
 .picker__legend {
-  padding: 0 0 9px;
-  font-size: 12px;
-  font-weight: 650;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--text-faint);
+  padding: 0 0 12px;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text);
 }
 
 .picker__list {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(206px, 1fr));
-  gap: 10px;
+  max-width: 100%;
+  min-width: 0;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
 }
 
 .activity {
   --activity-color: var(--accent);
-  --activity-soft: color-mix(in oklab, var(--activity-color) 8%, var(--surface));
+  --activity-soft: light-dark(
+    color-mix(in oklab, var(--activity-color) 7%, var(--surface)),
+    color-mix(in oklab, var(--activity-color) 18%, var(--surface))
+  );
   --activity-line: color-mix(in oklab, var(--activity-color) 42%, var(--border));
 
   position: relative;
   display: flex;
   align-items: flex-start;
-  gap: 11px;
-  padding: 13px 15px;
+  gap: 12px;
+  min-height: 128px;
+  padding: 17px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--surface);
@@ -473,12 +615,6 @@ code {
     background 0.18s var(--ease),
     translate 0.18s var(--ease),
     box-shadow 0.18s var(--ease);
-}
-
-@media (prefers-color-scheme: dark) {
-  .activity {
-    --activity-soft: color-mix(in oklab, var(--activity-color) 18%, var(--surface));
-  }
 }
 
 .activity:hover {
@@ -495,6 +631,7 @@ code {
 .activity:has(input:checked) {
   border-color: var(--activity-line);
   background: var(--activity-soft);
+  box-shadow: inset 0 3px 0 var(--activity-color), var(--shadow-1);
 }
 
 /* Прозрачный переключатель поверх всей карточки: он принимает нажатия
@@ -536,25 +673,23 @@ code {
 }
 
 .activity__name {
-  font-weight: 600;
+  font-size: 14.5px;
+  font-weight: 700;
   letter-spacing: -0.005em;
 }
 
 .activity__duration {
   font-size: 12.5px;
   font-weight: 600;
-  color: var(--activity-color);
+  color: light-dark(
+    var(--activity-color),
+    color-mix(in oklab, var(--activity-color) 52%, #fff 48%)
+  );
   font-variant-numeric: tabular-nums;
 }
 
-@media (prefers-color-scheme: dark) {
-  .activity__duration {
-    color: color-mix(in oklab, var(--activity-color) 52%, #fff 48%);
-  }
-}
-
 .activity__description {
-  margin-top: 3px;
+  margin-top: 6px;
   font-size: 12.5px;
   line-height: 1.4;
   color: var(--text-muted);
@@ -567,7 +702,7 @@ code {
 /* 6. Календарь ------------------------------------------------------------ */
 
 .board {
-  padding: 16px;
+  padding: 22px;
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   background: var(--surface);
@@ -579,8 +714,8 @@ code {
   flex-wrap: wrap;
   align-items: center;
   gap: 12px 16px;
-  padding-bottom: 14px;
-  margin-bottom: 14px;
+  padding-bottom: 18px;
+  margin-bottom: 18px;
   border-bottom: 1px solid var(--border);
 }
 
@@ -593,10 +728,44 @@ code {
 .weekbar__title {
   flex: 1;
   min-width: 180px;
-  font-size: 16px;
-  font-weight: 640;
+  font-size: 19px;
+  font-weight: 700;
   letter-spacing: -0.01em;
   font-variant-numeric: tabular-nums;
+}
+
+.manual-time {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: color-mix(in oklab, var(--accent) 4%, var(--surface-2));
+}
+
+.manual-time__title {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.manual-time__hint {
+  margin-top: 3px;
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+
+.manual-time__fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) repeat(2, minmax(0, 0.8fr)) auto;
+  align-items: end;
+  gap: 10px;
+}
+
+.manual-time__fields .field__input {
+  width: 100%;
+  min-width: 0;
 }
 
 .legend {
@@ -642,15 +811,15 @@ code {
 .calendar {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 9px;
+  gap: 10px;
 }
 
 .day {
   display: flex;
   flex-direction: column;
   gap: 9px;
-  min-height: 170px;
-  padding: 10px 9px 12px;
+  min-height: 176px;
+  padding: 12px 9px 14px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--surface-2);
@@ -667,6 +836,7 @@ code {
 .day--today {
   border-color: var(--accent-line);
   background: var(--accent-soft);
+  box-shadow: inset 0 3px 0 var(--accent-solid);
 }
 
 .day__header {
@@ -686,7 +856,7 @@ code {
 }
 
 .day__number {
-  font-size: 17px;
+  font-size: 19px;
   font-weight: 650;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.01em;
@@ -724,6 +894,7 @@ code {
   justify-content: center;
   gap: 5px;
   width: 100%;
+  min-height: 44px;
   padding: 8px 9px;
   overflow: hidden;
   border: 1px solid var(--accent-line);
@@ -881,7 +1052,7 @@ code {
   display: flex;
   flex-direction: column;
   gap: 14px;
-  padding: 18px;
+  padding: 22px;
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   background: var(--surface);
@@ -901,8 +1072,8 @@ code {
 }
 
 .panel__title {
-  font-size: 16.5px;
-  font-weight: 650;
+  font-size: 19px;
+  font-weight: 700;
   letter-spacing: -0.01em;
 }
 
@@ -974,11 +1145,21 @@ code {
   color: var(--text-faint);
 }
 
+.booking-slots {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-variant-numeric: tabular-nums;
+}
+
 .bookings {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding: 18px;
+  padding: 22px;
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   background: var(--surface);
@@ -986,8 +1167,8 @@ code {
 }
 
 .bookings__title {
-  font-size: 15px;
-  font-weight: 650;
+  font-size: 18px;
+  font-weight: 700;
 }
 
 .bookings__hint {
@@ -1007,6 +1188,7 @@ code {
 
 .booking {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
@@ -1035,6 +1217,33 @@ code {
   white-space: nowrap;
 }
 
+.booking__main {
+  min-width: 0;
+}
+
+.booking__actions {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 6px;
+}
+
+.booking__confirm {
+  flex-basis: 100%;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+  font-size: 12.5px;
+}
+
+.booking__confirm-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
 .tag {
   flex: none;
   padding: 3px 9px;
@@ -1049,7 +1258,7 @@ code {
   display: flex;
   flex-direction: column;
   gap: 11px;
-  padding: 18px;
+  padding: 22px;
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   background: var(--surface-2);
@@ -1164,13 +1373,229 @@ code {
 }
 
 .footer {
-  max-width: 1320px;
+  max-width: 1440px;
   width: 100%;
   margin: 0 auto;
-  padding: 18px 24px 28px;
+  padding: 18px 28px 28px;
   border-top: 1px solid var(--border);
   font-size: 12.5px;
   color: var(--text-faint);
+  overflow-wrap: anywhere;
+}
+
+/* Страница отдельной брони и переписка по секретной ссылке. */
+.booking-page__topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 10px;
+}
+
+.booking-page__main {
+  width: min(100%, 920px);
+  margin: 0 auto;
+  padding: 8px 28px 64px;
+  flex: 1;
+}
+
+.booking-page__back {
+  display: inline-flex;
+  margin: 0 0 20px;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.booking-page__back:hover {
+  color: var(--accent-ink);
+}
+
+.booking-page__details,
+.booking-page__chat {
+  padding: clamp(22px, 4vw, 36px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-1);
+}
+
+.booking-page__chat {
+  margin-top: 18px;
+}
+
+.booking-page__heading,
+.booking-page__chat-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.booking-page__eyebrow {
+  margin-bottom: 7px;
+  color: var(--text-faint);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.booking-page__heading h1 {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(28px, 4vw, 42px);
+  line-height: 1.15;
+}
+
+.booking-page__chat-heading h2 {
+  font-size: clamp(21px, 3vw, 27px);
+}
+
+.booking-page__status,
+.booking-page__chat-label {
+  flex: none;
+  padding: 6px 11px;
+  border: 1px solid color-mix(in oklab, var(--ok) 40%, var(--border));
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--ok) 9%, var(--surface));
+  color: var(--ok);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.booking-page__status--cancelled {
+  border-color: var(--border);
+  background: var(--surface-3);
+  color: var(--text-faint);
+}
+
+.booking-page__chat-label {
+  border-color: var(--border);
+  background: var(--surface-2);
+  color: var(--text-muted);
+}
+
+.booking-page__when {
+  margin-top: 18px;
+  font-size: 18px;
+  font-weight: 650;
+}
+
+.booking-page__guest {
+  margin-top: 4px;
+  color: var(--text-muted);
+}
+
+.booking-page__share {
+  display: grid;
+  gap: 6px;
+  margin: 25px 0 18px;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+}
+
+.booking-page__share-row {
+  display: flex;
+  gap: 9px;
+  min-width: 0;
+}
+
+.booking-page__share-row .field__input {
+  min-width: 0;
+  flex: 1;
+}
+
+.booking-page__confirm {
+  padding: 16px;
+  border: 1px solid var(--danger-line);
+  border-radius: var(--radius);
+  background: var(--danger-soft);
+}
+
+.booking-page__confirm-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin-top: 12px;
+}
+
+.booking-page__chat-hint {
+  margin: 10px 0 20px;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.booking-page__empty,
+.booking-page__closed {
+  padding: 20px;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.booking-page__messages {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 22px;
+}
+
+.booking-page__message {
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+}
+
+.booking-page__message-meta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 6px;
+  font-size: 13px;
+}
+
+.booking-page__message-meta time {
+  color: var(--text-faint);
+  font-size: 11px;
+}
+
+.booking-page__message p {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 14px;
+}
+
+.booking-page__form {
+  display: grid;
+  gap: 13px;
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+
+.booking-page__textarea {
+  min-height: 112px;
+  resize: vertical;
+}
+
+.booking-page__send {
+  width: auto;
+  justify-self: start;
+}
+
+.mobile-booking-link {
+  display: none;
+}
+
+#booking {
+  scroll-margin-top: 20px;
 }
 
 /* 10. Узкий экран и уменьшенная анимация ---------------------------------- */
@@ -1194,10 +1619,33 @@ code {
   }
 
   .topbar {
-    padding: 16px 16px 12px;
+    padding: 16px 16px 20px;
   }
 
   .topbar__note {
+    display: none;
+  }
+
+  .topbar__row {
+    margin-bottom: 15px;
+  }
+
+  .topbar__hero {
+    display: block;
+    min-height: 0;
+    border-radius: 22px;
+  }
+
+  .topbar__copy {
+    padding: 30px 32px;
+  }
+
+  .topbar__headline {
+    max-width: 20ch;
+    font-size: clamp(32px, 5.5vw, 45px);
+  }
+
+  .topbar__illustration {
     display: none;
   }
 
@@ -1206,8 +1654,16 @@ code {
     gap: 16px;
   }
 
+  .manual-time__fields {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .manual-time__fields .button {
+    grid-column: 1 / -1;
+  }
+
   .board {
-    padding: 12px;
+    padding: 18px;
   }
 
   .weekbar__title {
@@ -1220,16 +1676,16 @@ code {
      в список: слева день, справа слоты в несколько рядов. */
   .calendar {
     grid-template-columns: minmax(0, 1fr);
-    gap: 8px;
+    gap: 10px;
   }
 
   .day {
     display: grid;
-    grid-template-columns: 74px minmax(0, 1fr);
+    grid-template-columns: 82px minmax(0, 1fr);
     align-items: start;
-    gap: 10px;
+    gap: 12px;
     min-height: 0;
-    padding: 11px 12px;
+    padding: 13px 14px;
   }
 
   .day__header {
@@ -1240,8 +1696,8 @@ code {
 
   .day__slots {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(108px, 1fr));
-    gap: 6px;
+    grid-template-columns: repeat(auto-fill, minmax(94px, 1fr));
+    gap: 8px;
   }
 
   .day__empty {
@@ -1250,8 +1706,169 @@ code {
 
   .day__empty {
     margin: 0;
-    padding: 7px 12px;
+    padding: 10px 12px;
     text-align: left;
+  }
+
+  .mobile-booking-link {
+    position: fixed;
+    right: 16px;
+    bottom: calc(14px + env(safe-area-inset-bottom));
+    left: 16px;
+    z-index: 15;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    min-height: 66px;
+    padding: 12px 18px;
+    border: 1px solid #3c6957;
+    border-radius: 17px;
+    background: #173d37;
+    color: #f7faed;
+    box-shadow: 0 16px 34px -12px rgb(12 39 30 / 45%);
+    text-decoration: none;
+  }
+
+  .mobile-booking-link > span {
+    color: #c1e2ce;
+    font-size: 13px;
+  }
+
+  .mobile-booking-link strong {
+    font-size: 13px;
+    text-align: right;
+  }
+
+  .mobile-booking-link strong span {
+    margin-left: 4px;
+    font-size: 18px;
+  }
+
+  .app:has(.mobile-booking-link) {
+    padding-bottom: 94px;
+  }
+}
+
+@media (max-width: 600px) {
+  .booking-page__main {
+    padding: 8px 16px 40px;
+  }
+
+  .booking-page__heading,
+  .booking-page__chat-heading {
+    flex-direction: column;
+  }
+
+  .booking-page__share-row {
+    flex-direction: column;
+  }
+
+  .booking-page__share-row .button,
+  .booking-page__send {
+    width: 100%;
+  }
+
+  .theme-toggle {
+    width: 42px;
+    padding: 8px;
+  }
+
+  .theme-toggle span {
+    display: none;
+  }
+
+  .topbar__copy {
+    padding: 27px 24px 30px;
+  }
+
+  .topbar__description {
+    font-size: 13px;
+  }
+
+  .picker__list {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    padding: 2px 1px 10px;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+  }
+
+  .picker__list::-webkit-scrollbar {
+    display: none;
+  }
+
+  .activity {
+    flex: 0 0 min(72vw, 250px);
+    min-height: 140px;
+    scroll-snap-align: start;
+  }
+
+  .layout__side {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .manual-time__fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .manual-time__fields .field:first-child,
+  .manual-time__fields .button {
+    grid-column: 1 / -1;
+  }
+
+  .legend {
+    flex-wrap: wrap;
+    gap: 6px 12px;
+  }
+
+  .weekbar__nav {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .weekbar__nav .button {
+    flex: 1;
+  }
+
+  .footer {
+    padding: 16px 16px 24px;
+  }
+}
+
+@media (max-width: 380px) {
+  .topbar__headline {
+    font-size: 31px;
+  }
+
+  .board {
+    padding: 13px;
+  }
+
+  .manual-time {
+    padding: 13px;
+  }
+
+  .day {
+    grid-template-columns: 64px minmax(0, 1fr);
+    gap: 8px;
+    padding: 11px 9px;
+  }
+
+  .day__slots {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .slot {
+    padding-inline: 4px;
+  }
+
+  .mobile-booking-link {
+    right: 10px;
+    left: 10px;
+    padding-inline: 13px;
   }
 }
 

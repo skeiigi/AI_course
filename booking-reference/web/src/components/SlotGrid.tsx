@@ -14,7 +14,7 @@ interface Props {
   days: string[];
   slots: Slot[];
   today: string;
-  selected: Slot | null;
+  selected: Slot[];
   onPick: (slot: Slot) => void;
   onBusyPick: (slot: Slot) => void;
 }
@@ -61,18 +61,16 @@ export function SlotGrid({ days, slots, today, selected, onPick, onBusyPick }: P
 
             <div className="day__slots">
               {daySlots.length === 0 ? (
-                <p className="day__empty">нет приёма</p>
+                <p className="day__empty">{isPast ? 'время прошло' : 'нет приёма'}</p>
               ) : (
                 daySlots.map((slot) => (
                   <SlotButton
                     key={`${slot.schedule_id}-${slot.start_time}`}
                     slot={slot}
                     day={day}
-                    isSelected={
-                      selected !== null &&
-                      selected.date === slot.date &&
-                      selected.start_time === slot.start_time
-                    }
+                    isSelected={selected.some(
+                      (item) => item.date === slot.date && item.start_time === slot.start_time,
+                    )}
                     onPick={onPick}
                     onBusyPick={onBusyPick}
                   />

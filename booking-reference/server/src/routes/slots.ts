@@ -2,6 +2,7 @@
 
 import type { FastifyInstance } from 'fastify';
 
+import { currentBookingDateTime, isUpcomingSlot } from '../bookingTime.js';
 import { errors } from '../errors.js';
 import type { Repository } from '../repository.js';
 import { slotQuerySchema } from '../schemas.js';
@@ -30,6 +31,8 @@ export function slotRoutes(app: FastifyInstance, repository: Repository): void {
     // Роутер отвечает за поход в базу, движок слотов за вычисления.
     const schedules = repository.listSchedules(activity.id);
     const busy = repository.listBusySlots(activity.id, query.date_from, query.date_to);
-    return buildSlots(activity, schedules, busy, query.date_from, query.date_to);
+    const now = currentBookingDateTime();
+    return buildSlots(activity, schedules, busy, query.date_from, query.date_to)
+      .filter((slot) => isUpcomingSlot(slot.date, slot.start_time, now));
   });
 }

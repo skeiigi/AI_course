@@ -9,6 +9,7 @@
 
 import { resolve } from 'node:path';
 
+import { createAccessToken, hashAccessToken } from './bookingAccess.js';
 import { openDatabase } from './db.js';
 import { config } from './config.js';
 import { createRepository } from './repository.js';
@@ -118,7 +119,7 @@ export function seed(dbFile: string): void {
     end_time: '10:30:00',
     guest_name: 'Анна Соколова',
     guest_email: 'anna@example.com',
-  });
+  }, hashAccessToken(createAccessToken()));
   repository.createBooking({
     activity_id: consultation.id,
     date: addDays(monday, 2),
@@ -126,7 +127,7 @@ export function seed(dbFile: string): void {
     end_time: '12:00:00',
     guest_name: 'Пётр Ильин',
     guest_email: 'petr@example.com',
-  });
+  }, hashAccessToken(createAccessToken()));
 
   console.log('Готово. Демонстрационные данные добавлены.');
   db.close();

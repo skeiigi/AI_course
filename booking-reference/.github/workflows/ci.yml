@@ -3,7 +3,7 @@
 # Три задачи. Первая собирает контракт и проверяет, что закоммиченный
 # openapi.yaml совпадает с тем, что выдаёт компилятор, потом проверяет типы
 # и гоняет модульные и интеграционные тесты. Вторая гоняет сквозные тесты
-# в настоящем браузере. Третья собирает образ Docker.
+# в настоящем браузере. Третья собирает и проверяет запущенный образ Docker.
 name: CI
 
 on:
@@ -13,6 +13,9 @@ on:
 
 env:
   NODE_VERSION: "22"
+
+permissions:
+  contents: read
 
 jobs:
   check:
@@ -88,7 +91,7 @@ jobs:
           retention-days: 7
 
   docker:
-    name: Сборка образа
+    name: Сборка и проверка образа
     runs-on: ubuntu-latest
     needs: check
 
@@ -98,3 +101,65 @@ jobs:
 
       - name: Собрать образ
         run: docker build --tag booking-reference:ci .
+
+      - name: Поставить Node.js для проверки контейнера
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Запустить контейнер с временной базой
+        run: docker run --detach --name booking-smoke --publish 127.0.0.1:8124:8000 --tmpfs /data:rw,uid=1000,gid=1000 booking-reference:ci
+
+      - name: Дождаться готовности контейнера
+        run: |
+          for attempt in {1..30}; do
+            if [ "$(docker inspect --format '{{.State.Health.Status}}' booking-smoke)" = healthy ]; then
+              exit 0
+            fi
+            sleep 2
+          done
+          docker logs booking-smoke
+          exit 1
+
+      - name: Проверить интерфейс и бронирование в контейнере
+        run: node e2e/docker-smoke.mjs
+
+      - name: Проверить файлы размещения
+        env:
+          BOOKING_DOMAIN: http://127.0.0.1
+        run: |
+          bash -n deploy/cloudru/prepare-host.sh
+          docker compose -f deploy/cloudru/compose.yaml config --quiet
+          docker run --rm --env BOOKING_DOMAIN --volume "$PWD/deploy/cloudru/Caddyfile:/etc/caddy/Caddyfile:ro" caddy:2-alpine caddy validate --config /etc/caddy/Caddyfile
+
+      - name: Запустить конфигурацию публичного сайта
+        env:
+          BOOKING_DOMAIN: http://127.0.0.1
+        run: docker compose -f deploy/cloudru/compose.yaml up -d --no-build
+
+      - name: Проверить прокси и закрытие служебных маршрутов
+        run: |
+          for attempt in {1..20}; do
+            if curl --fail --silent http://127.0.0.1/api/activities >/dev/null; then
+              break
+            fi
+            sleep 2
+          done
+          curl --fail --silent http://127.0.0.1/ >/dev/null
+          curl --fail --silent http://127.0.0.1/api/activities >/dev/null
+          test "$(curl --silent --output /dev/null --write-out '%{http_code}' --request POST http://127.0.0.1/api/activities)" = 403
+          test "$(curl --silent --output /dev/null --write-out '%{http_code}' --request POST http://127.0.0.1/api/schedules)" = 403
+
+      - name: Показать логи при ошибке
+        if: failure()
+        run: docker logs booking-smoke
+
+      - name: Удалить тестовый контейнер
+        if: always()
+        run: docker rm --force booking-smoke || true
+
+      - name: Остановить тестовый сайт
+        if: always()
+        env:
+          BOOKING_DOMAIN: http://127.0.0.1
+        run: docker compose -f deploy/cloudru/compose.yaml down

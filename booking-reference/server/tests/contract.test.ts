@@ -33,7 +33,8 @@ import { activityRoutes } from '../src/routes/activities.js';
 import { bookingRoutes } from '../src/routes/bookings.js';
 import { scheduleRoutes } from '../src/routes/schedules.js';
 import { slotRoutes } from '../src/routes/slots.js';
-import type { Activity, Booking } from '../src/schemas.js';
+import type { Activity, BookingCreated } from '../src/schemas.js';
+import { addDays } from '../src/slotEngine.js';
 import { MONDAY, SATURDAY, createActivityWithSchedule, createTestApp } from './helpers.js';
 
 // ---------------------------------------------------------------------------
@@ -219,8 +220,6 @@ async function playAllScenarios(): Promise<void> {
   );
   expectMatchesContract('GET', '/api/slots', await app.inject('/api/slots'));
 
-  expectMatchesContract('GET', '/api/bookings', await app.inject('/api/bookings'));
-
   const booking = await app.inject({
     method: 'POST',
     url: '/api/bookings',
@@ -233,6 +232,21 @@ async function playAllScenarios(): Promise<void> {
     },
   });
   expectMatchesContract('POST', '/api/bookings', booking);
+  expectMatchesContract(
+    'POST',
+    '/api/bookings',
+    await app.inject({
+      method: 'POST',
+      url: '/api/bookings',
+      payload: {
+        activity_id: activity.id,
+        date: addDays(MONDAY, -14),
+        start_time: '10:00:00',
+        guest_name: 'Иван Петров',
+        guest_email: 'ivan@example.com',
+      },
+    }),
+  );
   expectMatchesContract(
     'POST',
     '/api/bookings',
@@ -279,23 +293,79 @@ async function playAllScenarios(): Promise<void> {
     }),
   );
 
-  const bookingId = (booking.json() as Booking).id;
+  const batchPayload = {
+    activity_id: activity.id,
+    slots: [
+      { date: MONDAY, start_time: '11:00:00' },
+      { date: MONDAY, start_time: '11:30:00' },
+    ],
+    guest_name: 'Иван Петров',
+    guest_email: 'ivan@example.com',
+  };
+  const batchPath = '/api/bookings/batch';
+  expectMatchesContract('POST', batchPath, await app.inject({
+    method: 'POST', url: batchPath, payload: batchPayload,
+  }));
+  expectMatchesContract('POST', batchPath, await app.inject({
+    method: 'POST', url: batchPath, payload: batchPayload,
+  }));
+  expectMatchesContract('POST', batchPath, await app.inject({
+    method: 'POST', url: batchPath, payload: { ...batchPayload, activity_id: 999 },
+  }));
+  expectMatchesContract('POST', batchPath, await app.inject({
+    method: 'POST', url: batchPath, payload: { ...batchPayload, slots: [] },
+  }));
+
+  const created = booking.json() as BookingCreated;
+  const bookingId = created.booking.id;
+  const headers = { Authorization: `Bearer ${created.access_token}` };
+  const getPath = '/api/bookings/{booking_id}';
+  expectMatchesContract(
+    'GET',
+    getPath,
+    await app.inject({ method: 'GET', url: `/api/bookings/${bookingId}`, headers }),
+  );
+  expectMatchesContract(
+    'GET',
+    getPath,
+    await app.inject({ method: 'GET', url: `/api/bookings/${bookingId}` }),
+  );
+  const messagesPath = '/api/bookings/{booking_id}/messages';
+  const messagesUrl = `/api/bookings/${bookingId}/messages`;
+  expectMatchesContract('GET', messagesPath, await app.inject({ method: 'GET', url: messagesUrl, headers }));
+  expectMatchesContract('GET', messagesPath, await app.inject({ method: 'GET', url: messagesUrl }));
+  expectMatchesContract('POST', messagesPath, await app.inject({
+    method: 'POST', url: messagesUrl, headers,
+    payload: { sender_name: 'Иван', body: 'Здравствуйте' },
+  }));
+  expectMatchesContract('POST', messagesPath, await app.inject({
+    method: 'POST', url: messagesUrl,
+    payload: { sender_name: 'Иван', body: 'Здравствуйте' },
+  }));
+  expectMatchesContract('POST', messagesPath, await app.inject({
+    method: 'POST', url: messagesUrl, headers,
+    payload: { sender_name: '', body: '' },
+  }));
   const cancelPath = '/api/bookings/{booking_id}/cancel';
   expectMatchesContract(
     'POST',
     cancelPath,
-    await app.inject({ method: 'POST', url: `/api/bookings/${bookingId}/cancel` }),
+    await app.inject({ method: 'POST', url: `/api/bookings/${bookingId}/cancel`, headers }),
   );
   expectMatchesContract(
     'POST',
     cancelPath,
-    await app.inject({ method: 'POST', url: `/api/bookings/${bookingId}/cancel` }),
+    await app.inject({ method: 'POST', url: `/api/bookings/${bookingId}/cancel`, headers }),
   );
   expectMatchesContract(
     'POST',
     cancelPath,
-    await app.inject({ method: 'POST', url: '/api/bookings/999/cancel' }),
+    await app.inject({ method: 'POST', url: '/api/bookings/999/cancel', headers }),
   );
+  expectMatchesContract('POST', messagesPath, await app.inject({
+    method: 'POST', url: messagesUrl, headers,
+    payload: { sender_name: 'Иван', body: 'После отмены' },
+  }));
 }
 
 // ---------------------------------------------------------------------------

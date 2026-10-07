@@ -5,8 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content="Сервис бронирования тайм-слотов: выберите вид активности и свободное время." />
     <meta name="color-scheme" content="light dark" />
-    <meta name="theme-color" content="#f4f5f8" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#0d1016" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#f3f4ee" />
+    <script>
+      try {
+        const savedTheme = localStorage.getItem('booking.theme');
+        if (savedTheme === 'light' || savedTheme === 'dark') {
+          document.documentElement.dataset.theme = savedTheme;
+        }
+        const isDark = savedTheme === 'dark' ||
+          (savedTheme !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches);
+        document.querySelector('meta[name="theme-color"]').content = isDark ? '#101d1a' : '#f3f4ee';
+      } catch {
+        // Недоступное хранилище не мешает открыть страницу.
+      }
+    </script>
     <title>Бронирование тайм-слотов</title>
   </head>
   <body>

@@ -6,9 +6,11 @@
  * перечитались с сервера, а не показывали устаревшую картину.
  */
 
-import { useCallback, useEffect, useState, type CSSProperties } from 'react';
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
 
-import { ApiError, api, type Activity, type Booking, type Slot } from './api';
+import { ApiError, api, type Activity, type Booking, type BookingCreated, type Slot } from './api';
+import { bookingLinkFromHash, bookingLinkUrl, readBookingLinks, saveBookingLink } from './bookingLinks';
+import type { BookingLink } from './bookingLinks';
 import {
   addDays,
   dayAndMonth,
@@ -22,32 +24,91 @@ import {
 import { useAsyncData, useRememberedValue } from './hooks';
 import { ActivityPicker } from './components/ActivityPicker';
 import { BookingPanel } from './components/BookingPanel';
+import { BookingPage } from './components/BookingPage';
 import { HowItWorks } from './components/HowItWorks';
 import { CalendarIcon } from './components/Icons';
+import { ManualTimePicker } from './components/ManualTimePicker';
 import { MyBookings } from './components/MyBookings';
 import { SlotGrid } from './components/SlotGrid';
 import { EmptyState, ErrorState, SlotGridSkeleton } from './components/States';
 import { Toast, type ToastMessage } from './components/Toast';
+import { ThemeToggle } from './components/ThemeToggle';
 import { WeekBar } from './components/WeekBar';
 
 const DEFAULT_ACCENT = '#3b5bdb';
+type Theme = 'light' | 'dark';
+
+function systemTheme(): Theme {
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
+
+function updateThemeColor(theme: Theme): void {
+  document.querySelector('meta[name="theme-color"]')?.setAttribute(
+    'content', theme === 'dark' ? '#101d1a' : '#f3f4ee',
+  );
+}
 
 export function App() {
+  const [openedLink, setOpenedLink] = useState(() => bookingLinkFromHash(window.location.hash));
+  const [theme, setTheme] = useState<Theme>(() => {
+    const saved = document.documentElement.dataset.theme;
+    return saved === 'light' || saved === 'dark' ? saved : systemTheme();
+  });
+
+  useEffect(() => {
+    const media = window.matchMedia('(prefers-color-scheme: dark)');
+    const followSystem = (): void => {
+      if (document.documentElement.dataset.theme === undefined) {
+        const next = media.matches ? 'dark' : 'light';
+        setTheme(next);
+        updateThemeColor(next);
+      }
+    };
+    media.addEventListener('change', followSystem);
+    return () => media.removeEventListener('change', followSystem);
+  }, []);
+
+  useEffect(() => {
+    const updateLink = (): void => setOpenedLink(bookingLinkFromHash(window.location.hash));
+    window.addEventListener('hashchange', updateLink);
+    return () => window.removeEventListener('hashchange', updateLink);
+  }, []);
+
+  function toggleTheme(): void {
+    const next = theme === 'dark' ? 'light' : 'dark';
+    document.documentElement.dataset.theme = next;
+    updateThemeColor(next);
+    try {
+      localStorage.setItem('booking.theme', next);
+    } catch {
+      // Тема остаётся выбранной до закрытия страницы.
+    }
+    setTheme(next);
+  }
+
+  return openedLink === null
+    ? <BookingHome theme={theme} onToggleTheme={toggleTheme} />
+    : <BookingPage key={`${openedLink.id}.${openedLink.token}`} link={openedLink} theme={theme} onToggleTheme={toggleTheme} />;
+}
+
+function BookingHome({ theme, onToggleTheme }: { theme: Theme; onToggleTheme: () => void }) {
   const todayDate = today();
 
   const [activityId, setActivityId] = useState<number | null>(null);
   const [weekStart, setWeekStart] = useState(() => startOfWeek(todayDate));
   const [reload, setReload] = useState(0);
 
-  const [selected, setSelected] = useState<Slot | null>(null);
-  const [confirmed, setConfirmed] = useState<Booking | null>(null);
+  const [selected, setSelected] = useState<Slot[]>([]);
+  const selectedRef = useRef(selected);
+  selectedRef.current = selected;
+  const [confirmed, setConfirmed] = useState<BookingCreated[] | null>(null);
   const [isSending, setIsSending] = useState(false);
   const [cancellingId, setCancellingId] = useState<number | null>(null);
   const [toast, setToast] = useState<ToastMessage | null>(null);
 
   const [guestName, setGuestName] = useRememberedValue('booking.guest-name');
   const [guestEmail, setGuestEmail] = useRememberedValue('booking.guest-email');
-  const [bookingsEmail, setBookingsEmail] = useState(guestEmail);
+  const [bookingLinks, setBookingLinks] = useState(readBookingLinks);
 
   const refresh = useCallback(() => setReload((value) => value + 1), []);
   const hideToast = useCallback(() => setToast(null), []);
@@ -66,9 +127,10 @@ export function App() {
   );
 
   const bookings = useAsyncData<Booking[]>(
-    (signal) =>
-      bookingsEmail.includes('@') ? api.listBookings(bookingsEmail, signal) : Promise.resolve([]),
-    [bookingsEmail, reload],
+    (signal) => Promise.all(
+      bookingLinks.map((link) => api.getBooking(link.id, link.token, signal)),
+    ).then((items) => items.sort((left, right) => right.id - left.id)),
+    [bookingLinks, reload],
   );
 
   // --- согласование состояния ----------------------------------------------
@@ -84,32 +146,28 @@ export function App() {
     }
   }, [activities, activityId]);
 
-  // Смена активности или недели сбрасывает выбор: старый слот к новой сетке
-  // отношения не имеет.
+  // При смене активности выбранные слоты уже не относятся к новому расписанию.
   useEffect(() => {
-    setSelected(null);
+    setSelected([]);
     setConfirmed(null);
-  }, [activityId, weekStart]);
+  }, [activityId]);
 
-  // Если пока пользователь заполнял форму, слот заняли, снимаем выбор.
+  // Обновление текущей недели не должно удалять выбор из других недель.
   useEffect(() => {
-    if (slots.status !== 'ready' || selected === null) {
+    if (slots.status !== 'ready') {
       return;
     }
-    const fresh = slots.data.find(
-      (slot) => slot.date === selected.date && slot.start_time === selected.start_time,
-    );
-    if (fresh === undefined || !fresh.is_free) {
-      setSelected(null);
-    }
-  }, [slots, selected]);
-
-  // Список броней перечитываем не на каждое нажатие клавиши, а когда
-  // пользователь перестал печатать.
-  useEffect(() => {
-    const timer = setTimeout(() => setBookingsEmail(guestEmail.trim()), 400);
-    return () => clearTimeout(timer);
-  }, [guestEmail]);
+    setSelected((current) => {
+      const available = current.filter((item) =>
+        item.date < weekStart || item.date > weekEnd || slots.data.some(
+          (slot) => slot.date === item.date && slot.start_time === item.start_time && slot.is_free,
+        ),
+      );
+      return available.length === current.length ? current : available;
+    });
+    // Отбор выполняется после ответа API, а не при смене недели до нового ответа.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slots]);
 
   // --- действия -------------------------------------------------------------
 
@@ -119,32 +177,44 @@ export function App() {
       : null;
 
   async function submitBooking(): Promise<void> {
-    if (activity === null || selected === null) {
+    if (activity === null || selected.length === 0) {
       return;
     }
     setIsSending(true);
     try {
-      const booking = await api.createBooking({
-        activity_id: activity.id,
-        date: selected.date,
-        start_time: selected.start_time,
-        guest_name: guestName.trim(),
-        guest_email: guestEmail.trim(),
-      });
-      setConfirmed(booking);
-      setSelected(null);
-      setBookingsEmail(guestEmail.trim());
+      const created = selected.length === 1
+        ? [await api.createBooking({
+          activity_id: activity.id,
+          date: selected[0].date,
+          start_time: selected[0].start_time,
+          guest_name: guestName.trim(),
+          guest_email: guestEmail.trim(),
+        })]
+        : (await api.createBookings({
+          activity_id: activity.id,
+          slots: selected.map(({ date, start_time }) => ({ date, start_time })),
+          guest_name: guestName.trim(),
+          guest_email: guestEmail.trim(),
+        })).bookings;
+      let links = bookingLinks;
+      for (const { booking, access_token: token } of created) {
+        links = saveBookingLink({ id: booking.id, token });
+      }
+      setBookingLinks(links);
+      setConfirmed(created);
+      setSelected([]);
       setToast({
         kind: 'success',
-        text: `Записали: ${dayAndMonth(booking.date)}, ${shortTime(booking.start_time)}`,
+        text: created.length === 1
+          ? `Записали: ${dayAndMonth(created[0].booking.date)}, ${shortTime(created[0].booking.start_time)}`
+          : `Записали ${slotsLabel(created.length)}`,
       });
       refresh();
     } catch (error) {
       setToast({ kind: 'error', text: describe(error, 'Не удалось создать бронь') });
-      // Слот заняли, пока была открыта форма: обновляем сетку, чтобы он
-      // сразу показался занятым.
-      if (error instanceof ApiError && error.code === 'slot_taken') {
-        setSelected(null);
+      // Сетка могла устареть, пока гость заполнял форму.
+      if (error instanceof ApiError && ['slot_taken', 'slot_in_past'].includes(error.code)) {
+        setSelected([]);
         refresh();
       }
     } finally {
@@ -152,16 +222,48 @@ export function App() {
     }
   }
 
+  function applyManualTime(date: string, matching: Slot[]): void {
+    const otherDates = selectedRef.current.filter((slot) => slot.date !== date);
+    if (otherDates.length + matching.length > 20) {
+      throw new Error('За один раз можно выбрать не более 20 слотов');
+    }
+    setSelected([...otherDates, ...matching].sort((left, right) =>
+      `${left.date} ${left.start_time}`.localeCompare(`${right.date} ${right.start_time}`),
+    ));
+    setConfirmed(null);
+    setWeekStart(startOfWeek(date));
+  }
+
   async function cancelBooking(booking: Booking): Promise<void> {
+    const link = bookingLinks.find((item) => item.id === booking.id);
+    if (link === undefined) {
+      setToast({ kind: 'error', text: 'Секретная ссылка на эту бронь не найдена' });
+      return;
+    }
     setCancellingId(booking.id);
     try {
-      await api.cancelBooking(booking.id);
+      await api.cancelBooking(booking.id, link.token);
       setToast({ kind: 'success', text: 'Бронь отменена, слот снова свободен' });
       refresh();
     } catch (error) {
       setToast({ kind: 'error', text: describe(error, 'Не удалось отменить бронь') });
     } finally {
       setCancellingId(null);
+    }
+  }
+
+  async function copyBookingLink(link: BookingLink | undefined): Promise<void> {
+    if (link === undefined) {
+      setToast({ kind: 'error', text: 'Секретная ссылка на эту бронь не найдена' });
+      return;
+    }
+
+    const url = bookingLinkUrl(link);
+    try {
+      await navigator.clipboard.writeText(url);
+      setToast({ kind: 'success', text: 'Ссылка на бронь скопирована' });
+    } catch {
+      window.prompt('Скопируйте секретную ссылку на бронь:', url);
     }
   }
 
@@ -178,18 +280,37 @@ export function App() {
       </a>
 
       <header className="topbar">
-        <div className="topbar__brand">
-          <span className="topbar__mark" aria-hidden="true">
-            <CalendarIcon />
-          </span>
-          <div>
-            <h1 className="topbar__title">Тайм-слоты</h1>
-            <p className="topbar__subtitle">Запись на встречу без переписки</p>
+        <div className="topbar__row">
+          <div className="topbar__brand">
+            <span className="topbar__mark" aria-hidden="true">
+              <CalendarIcon />
+            </span>
+            <div>
+              <h1 className="topbar__title">Тайм-слоты</h1>
+              <p className="topbar__subtitle">Запись на встречу без переписки</p>
+            </div>
+          </div>
+          <div className="topbar__actions">
+            <p className="topbar__note">
+              Учебный проект курса «ИИ для разработчиков», Сибирский федеральный университет
+            </p>
+            <ThemeToggle theme={theme} onToggle={onToggleTheme} />
           </div>
         </div>
-        <p className="topbar__note">
-          Учебный проект курса «ИИ для разработчиков», Сибирский федеральный университет
-        </p>
+        <div className="topbar__hero">
+          <div className="topbar__copy">
+            <p className="topbar__eyebrow">Онлайн-запись · время Красноярска</p>
+            <p className="topbar__headline">Найдите время для важного разговора.</p>
+            <p className="topbar__description">
+              Выберите формат встречи и свободный слот. Подтверждение появится сразу после записи.
+            </p>
+          </div>
+          <div className="topbar__illustration" aria-hidden="true">
+            <span className="topbar__orbit topbar__orbit--outer" />
+            <span className="topbar__orbit topbar__orbit--inner" />
+            <span className="topbar__orbit-center"><CalendarIcon /></span>
+          </div>
+        </div>
       </header>
 
       <main className="layout">
@@ -221,6 +342,8 @@ export function App() {
               onToday={() => setWeekStart(startOfWeek(todayDate))}
             />
 
+            <ManualTimePicker activityId={activityId} onApply={applyManualTime} />
+
             {slots.status === 'loading' && <SlotGridSkeleton />}
             {slots.status === 'error' && <ErrorState message={slots.message} onRetry={refresh} />}
             {slots.status === 'ready' &&
@@ -244,7 +367,26 @@ export function App() {
                   today={todayDate}
                   selected={selected}
                   onPick={(slot) => {
-                    setSelected(slot);
+                    const alreadySelected = selected.some(
+                      (item) => item.date === slot.date && item.start_time === slot.start_time,
+                    );
+                    if (!alreadySelected && selected.length >= 20) {
+                      setToast({ kind: 'error', text: 'За один раз можно выбрать не более 20 слотов' });
+                      return;
+                    }
+                    setSelected((current) => {
+                      const hasSlot = current.some(
+                        (item) => item.date === slot.date && item.start_time === slot.start_time,
+                      );
+                      if (hasSlot) {
+                        return current.filter(
+                          (item) => item.date !== slot.date || item.start_time !== slot.start_time,
+                        );
+                      }
+                      return [...current, slot].sort((left, right) =>
+                        `${left.date} ${left.start_time}`.localeCompare(`${right.date} ${right.start_time}`),
+                      );
+                    });
                     setConfirmed(null);
                   }}
                   onBusyPick={() =>
@@ -266,7 +408,7 @@ export function App() {
         <aside className="layout__side">
           <BookingPanel
             activity={activity}
-            slot={selected}
+            slots={selected}
             confirmed={confirmed}
             isSending={isSending}
             guestName={guestName}
@@ -275,18 +417,29 @@ export function App() {
             onGuestEmailChange={setGuestEmail}
             onSubmit={() => void submitBooking()}
             onReset={() => setConfirmed(null)}
+            onCopyLink={(link) => void copyBookingLink(link)}
           />
 
           <MyBookings
-            guestEmail={bookingsEmail.includes('@') ? bookingsEmail : ''}
             bookings={bookings}
+            links={bookingLinks}
             cancellingId={cancellingId}
             onCancel={(booking) => void cancelBooking(booking)}
+            onCopyLink={(booking) =>
+              void copyBookingLink(bookingLinks.find((link) => link.id === booking.id))
+            }
           />
 
           <HowItWorks />
         </aside>
       </main>
+
+      {selected.length > 0 && confirmed === null && (
+        <a className="mobile-booking-link" href="#booking">
+          <span>Выбрано: {slotsLabel(selected.length)}</span>
+          <strong>Перейти к оформлению <span aria-hidden="true">→</span></strong>
+        </a>
+      )}
 
       <footer className="footer">
         <p>

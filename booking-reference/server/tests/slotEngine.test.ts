@@ -91,6 +91,17 @@ describe('сетка слотов внутри рабочего окна', () =>
     expect(times.at(-1)?.end_time).toBe('11:45:00');
   });
 
+  it('сохраняет секунды начала рабочего окна при построении слотов', () => {
+    const times = timesForSchedule(
+      schedule({ start_time: '10:00:30', end_time: '11:00:30' }),
+      30,
+    );
+    expect(times).toEqual([
+      { start_time: '10:00:30', end_time: '10:30:30' },
+      { start_time: '10:30:30', end_time: '11:00:30' },
+    ]);
+  });
+
   it('допускает слоты внахлёст, если шаг меньше длительности', () => {
     const times = timesForSchedule(schedule({ step_minutes: 15 }), 30);
     expect(times.map((time) => time.start_time)).toEqual([

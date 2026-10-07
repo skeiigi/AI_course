@@ -37,6 +37,9 @@ union ErrorCode {
   /** На этот слот уже есть действующая бронь. */
   slot_taken: "slot_taken",
 
+  /** Время начала слота уже прошло в часовом поясе сервиса. */
+  slot_in_past: "slot_in_past",
+
   /** Бронь уже была отменена раньше. */
   booking_already_cancelled: "booking_already_cancelled",
 
@@ -45,6 +48,9 @@ union ErrorCode {
 
   /** Диапазон дат пустой или слишком длинный. */
   invalid_date_range: "invalid_date_range",
+
+  /** Переписка по этой брони уже закрыта. */
+  chat_closed: "chat_closed",
 }
 
 /** Общее тело ответа при любой ошибке сервиса. */
@@ -237,7 +243,7 @@ model Booking {
   @maxLength(100)
   guest_name: string;
 
-  /** Почта гостя. По ней гость находит свои брони, учётной записи у него нет. */
+  /** Контактная почта гостя. Доступ к брони даёт отдельный секрет. */
   @format("email")
   guest_email: string;
 
@@ -246,6 +252,13 @@ model Booking {
 
   /** Момент создания брони в UTC. */
   created_at: utcDateTime;
+}
+
+/** Результат создания. Секрет выдаётся один раз и нужен для просмотра и отмены. */
+model BookingCreated {
+  booking: Booking;
+  @pattern("^[0-9a-f]{64}$")
+  access_token: string;
 }
 
 /** Данные для создания брони. */
@@ -260,6 +273,59 @@ model BookingCreate {
 
   @format("email")
   guest_email: string;
+}
+
+/** Один слот в групповом запросе. */
+model BookingSlotCreate {
+  date: plainDate;
+  start_time: plainTime;
+}
+
+/** Несколько броней одной активности для одного гостя. */
+model BookingBatchCreate {
+  activity_id: int32;
+  @minItems(1)
+  @maxItems(20)
+  slots: BookingSlotCreate[];
+  @minLength(1)
+  @maxLength(100)
+  guest_name: string;
+  @format("email")
+  guest_email: string;
+}
+
+/** Каждая бронь получает собственный секрет доступа. */
+model BookingBatchCreated {
+  bookings: BookingCreated[];
+}
+
+/** Сообщение участника встречи. Имя указано отправителем и не проверено. */
+model BookingMessage {
+  id: int32;
+  booking_id: int32;
+  @minLength(1)
+  @maxLength(60)
+  sender_name: string;
+  @minLength(1)
+  @maxLength(2000)
+  body: string;
+  created_at: utcDateTime;
+}
+
+/** Переписка и право отправить новое сообщение. */
+model BookingChat {
+  messages: BookingMessage[];
+  can_post: boolean;
+}
+
+/** Текст нового сообщения. */
+model BookingMessageCreate {
+  @minLength(1)
+  @maxLength(60)
+  sender_name: string;
+  @minLength(1)
+  @maxLength(2000)
+  body: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -299,7 +365,7 @@ namespace Schedules {
 @route("/api/slots")
 @tag("slots")
 namespace Slots {
-  /** Свободные и занятые слоты активности на диапазон дат. */
+  /** Предстоящие свободные и занятые слоты активности на диапазон дат. */
   @get
   op list(
     @query activity_id: int32,
@@ -311,19 +377,45 @@ namespace Slots {
 @route("/api/bookings")
 @tag("bookings")
 namespace Bookings {
-  /** Список броней, новые сверху. Можно отфильтровать по почте гостя. */
-  @get
-  op list(@query guest_email?: string): Booking[];
-
   /** Создать бронь на свободный слот. */
   @post
   op create(@body body: BookingCreate): {
     @statusCode statusCode: 201;
-    @body booking: Booking;
+    @body result: BookingCreated;
   } | NotFoundError | ConflictError | ValidationError;
 
-  /** Отменить бронь. После отмены слот снова свободен. */
+  /** Создать несколько броней атомарно: если один слот недоступен, не создаётся ни одна. */
+  @route("/batch")
+  @post
+  op createBatch(@body body: BookingBatchCreate): {
+    @statusCode statusCode: 201;
+    @body result: BookingBatchCreated;
+  } | NotFoundError | ConflictError | ValidationError;
+
+  /** Просмотреть бронь по секрету, выданному при создании. */
+  @route("/{booking_id}")
+  @get
+  op get(@path booking_id: int32, @header authorization: string): Booking | NotFoundError;
+
+  /** Отменить бронь по секрету. После отмены слот снова свободен. */
   @route("/{booking_id}/cancel")
   @post
-  op cancel(@path booking_id: int32): Booking | NotFoundError | ConflictError;
+  op cancel(@path booking_id: int32, @header authorization: string): Booking | NotFoundError | ConflictError;
+
+  /** Читать переписку по секрету брони. */
+  @route("/{booking_id}/messages")
+  @get
+  op listMessages(@path booking_id: int32, @header authorization: string): BookingChat | NotFoundError;
+
+  /** Добавить сообщение до начала действующей встречи. */
+  @route("/{booking_id}/messages")
+  @post
+  op createMessage(
+    @path booking_id: int32,
+    @header authorization: string,
+    @body body: BookingMessageCreate,
+  ): {
+    @statusCode statusCode: 201;
+    @body message: BookingMessage;
+  } | NotFoundError | ConflictError | ValidationError;
 }

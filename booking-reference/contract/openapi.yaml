@@ -51,27 +51,6 @@ paths:
             schema:
               $ref: '#/components/schemas/ActivityCreate'
   /api/bookings:
-    get:
-      operationId: Bookings_list
-      description: Список броней, новые сверху. Можно отфильтровать по почте гостя.
-      parameters:
-        - name: guest_email
-          in: query
-          required: false
-          schema:
-            type: string
-          explode: false
-      responses:
-        '200':
-          description: The request has succeeded.
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Booking'
-      tags:
-        - bookings
     post:
       operationId: Bookings_create
       description: Создать бронь на свободный слот.
@@ -82,7 +61,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Booking'
+                $ref: '#/components/schemas/BookingCreated'
         '404':
           description: Запрошенный объект не найден.
           content:
@@ -109,10 +88,48 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/BookingCreate'
-  /api/bookings/{booking_id}/cancel:
+  /api/bookings/batch:
     post:
-      operationId: Bookings_cancel
-      description: Отменить бронь. После отмены слот снова свободен.
+      operationId: Bookings_createBatch
+      description: 'Создать несколько броней атомарно: если один слот недоступен, не создаётся ни одна.'
+      parameters: []
+      responses:
+        '201':
+          description: The request has succeeded and a new resource has been created as a result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookingBatchCreated'
+        '404':
+          description: Запрошенный объект не найден.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '409':
+          description: Действие противоречит текущему состоянию данных.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '422':
+          description: Данные синтаксически верны, но нарушают правила предметной области.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+      tags:
+        - bookings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookingBatchCreate'
+  /api/bookings/{booking_id}:
+    get:
+      operationId: Bookings_get
+      description: Просмотреть бронь по секрету, выданному при создании.
       parameters:
         - name: booking_id
           in: path
@@ -120,6 +137,42 @@ paths:
           schema:
             type: integer
             format: int32
+        - name: authorization
+          in: header
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Booking'
+        '404':
+          description: Запрошенный объект не найден.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+      tags:
+        - bookings
+  /api/bookings/{booking_id}/cancel:
+    post:
+      operationId: Bookings_cancel
+      description: Отменить бронь по секрету. После отмены слот снова свободен.
+      parameters:
+        - name: booking_id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int32
+        - name: authorization
+          in: header
+          required: true
+          schema:
+            type: string
       responses:
         '200':
           description: The request has succeeded.
@@ -141,6 +194,85 @@ paths:
                 $ref: '#/components/schemas/ErrorBody'
       tags:
         - bookings
+  /api/bookings/{booking_id}/messages:
+    get:
+      operationId: Bookings_listMessages
+      description: Читать переписку по секрету брони.
+      parameters:
+        - name: booking_id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int32
+        - name: authorization
+          in: header
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookingChat'
+        '404':
+          description: Запрошенный объект не найден.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+      tags:
+        - bookings
+    post:
+      operationId: Bookings_createMessage
+      description: Добавить сообщение до начала действующей встречи.
+      parameters:
+        - name: booking_id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int32
+        - name: authorization
+          in: header
+          required: true
+          schema:
+            type: string
+      responses:
+        '201':
+          description: The request has succeeded and a new resource has been created as a result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookingMessage'
+        '404':
+          description: Запрошенный объект не найден.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '409':
+          description: Действие противоречит текущему состоянию данных.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '422':
+          description: Данные синтаксически верны, но нарушают правила предметной области.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+      tags:
+        - bookings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookingMessageCreate'
   /api/schedules:
     get:
       operationId: Schedules_list
@@ -198,7 +330,7 @@ paths:
   /api/slots:
     get:
       operationId: Slots_list
-      description: Свободные и занятые слоты активности на диапазон дат.
+      description: Предстоящие свободные и занятые слоты активности на диапазон дат.
       parameters:
         - name: activity_id
           in: query
@@ -357,7 +489,7 @@ components:
         guest_email:
           type: string
           format: email
-          description: Почта гостя. По ней гость находит свои брони, учётной записи у него нет.
+          description: Контактная почта гостя. Доступ к брони даёт отдельный секрет.
         status:
           $ref: '#/components/schemas/BookingStatus'
           description: Статус брони.
@@ -366,6 +498,54 @@ components:
           format: date-time
           description: Момент создания брони в UTC.
       description: Бронь гостя на конкретный слот.
+    BookingBatchCreate:
+      type: object
+      required:
+        - activity_id
+        - slots
+        - guest_name
+        - guest_email
+      properties:
+        activity_id:
+          type: integer
+          format: int32
+        slots:
+          type: array
+          items:
+            $ref: '#/components/schemas/BookingSlotCreate'
+          minItems: 1
+          maxItems: 20
+        guest_name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        guest_email:
+          type: string
+          format: email
+      description: Несколько броней одной активности для одного гостя.
+    BookingBatchCreated:
+      type: object
+      required:
+        - bookings
+      properties:
+        bookings:
+          type: array
+          items:
+            $ref: '#/components/schemas/BookingCreated'
+      description: Каждая бронь получает собственный секрет доступа.
+    BookingChat:
+      type: object
+      required:
+        - messages
+        - can_post
+      properties:
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/BookingMessage'
+        can_post:
+          type: boolean
+      description: Переписка и право отправить новое сообщение.
     BookingCreate:
       type: object
       required:
@@ -392,6 +572,73 @@ components:
           type: string
           format: email
       description: Данные для создания брони.
+    BookingCreated:
+      type: object
+      required:
+        - booking
+        - access_token
+      properties:
+        booking:
+          $ref: '#/components/schemas/Booking'
+        access_token:
+          type: string
+          pattern: ^[0-9a-f]{64}$
+      description: Результат создания. Секрет выдаётся один раз и нужен для просмотра и отмены.
+    BookingMessage:
+      type: object
+      required:
+        - id
+        - booking_id
+        - sender_name
+        - body
+        - created_at
+      properties:
+        id:
+          type: integer
+          format: int32
+        booking_id:
+          type: integer
+          format: int32
+        sender_name:
+          type: string
+          minLength: 1
+          maxLength: 60
+        body:
+          type: string
+          minLength: 1
+          maxLength: 2000
+        created_at:
+          type: string
+          format: date-time
+      description: Сообщение участника встречи. Имя указано отправителем и не проверено.
+    BookingMessageCreate:
+      type: object
+      required:
+        - sender_name
+        - body
+      properties:
+        sender_name:
+          type: string
+          minLength: 1
+          maxLength: 60
+        body:
+          type: string
+          minLength: 1
+          maxLength: 2000
+      description: Текст нового сообщения.
+    BookingSlotCreate:
+      type: object
+      required:
+        - date
+        - start_time
+      properties:
+        date:
+          type: string
+          format: date
+        start_time:
+          type: string
+          format: time
+      description: Один слот в групповом запросе.
     BookingStatus:
       type: string
       enum:
@@ -419,9 +666,11 @@ components:
         - booking_not_found
         - slot_not_found
         - slot_taken
+        - slot_in_past
         - booking_already_cancelled
         - invalid_time_window
         - invalid_date_range
+        - chat_closed
       description: Машиночитаемый код ошибки. Клиент опирается на код, человек читает message.
     Schedule:
       type: object

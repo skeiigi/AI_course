@@ -8,12 +8,15 @@
 import type { FastifyInstance } from 'fastify';
 
 import { buildApp } from '../src/app.js';
+import { currentBookingDateTime } from '../src/bookingTime.js';
 import type { Activity, Schedule } from '../src/schemas.js';
+import { addDays, isoWeekday } from '../src/slotEngine.js';
 
-/** Понедельник, на который опираются тесты. Дата в будущем и не зависит от «сегодня». */
-export const MONDAY = '2026-10-05';
-export const TUESDAY = '2026-10-06';
-export const SATURDAY = '2026-10-10';
+/** Следующий понедельник: тесты бронирования не устаревают после текущей недели. */
+const currentDate = currentBookingDateTime().date;
+export const MONDAY = addDays(currentDate, 8 - isoWeekday(currentDate));
+export const TUESDAY = addDays(MONDAY, 1);
+export const SATURDAY = addDays(MONDAY, 5);
 
 export function createTestApp(): FastifyInstance {
   return buildApp({ dbFile: ':memory:', webDir: null, logger: false });

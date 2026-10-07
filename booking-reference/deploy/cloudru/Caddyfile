@@ -1,0 +1,11 @@
+{$BOOKING_DOMAIN} {
+    @management {
+        method POST
+        path /api/activities /api/schedules
+    }
+
+    route {
+        respond @management "Управление расписанием закрыто в публичной демонстрации" 403
+        reverse_proxy booking:8000
+    }
+}

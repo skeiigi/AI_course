@@ -11,7 +11,7 @@ import Database from 'better-sqlite3';
 export type Db = Database.Database;
 
 /**
- * Схема базы. Три таблицы: активности, расписания и брони.
+ * Схема базы: активности, расписания, брони и хеши секретов доступа.
  * Слотов среди них нет: они вычисляются на лету, смотри docs/adr/0002.
  *
  * Время храним строками «ЧЧ:ММ:СС», даты строками «ГГГГ-ММ-ДД». В SQLite нет
@@ -48,8 +48,24 @@ CREATE TABLE IF NOT EXISTS bookings (
   created_at  TEXT    NOT NULL
 );
 
+-- Храним только хеш секрета; существующие брони без секрета остаются в истории,
+-- но удалённо управлять ими нельзя.
+CREATE TABLE IF NOT EXISTS booking_access (
+  booking_id  INTEGER PRIMARY KEY REFERENCES bookings(id) ON DELETE CASCADE,
+  token_hash  TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS booking_messages (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  booking_id  INTEGER NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,
+  sender_name TEXT NOT NULL,
+  body        TEXT NOT NULL,
+  created_at  TEXT NOT NULL
+);
+
 CREATE INDEX IF NOT EXISTS ix_schedules_activity ON schedules (activity_id);
 CREATE INDEX IF NOT EXISTS ix_bookings_guest     ON bookings (guest_email);
+CREATE INDEX IF NOT EXISTS ix_booking_messages_booking ON booking_messages (booking_id, id);
 
 -- Второй рубеж защиты от двойного бронирования, смотри docs/adr/0003.
 -- Частичный индекс: под ограничение попадают только действующие брони,

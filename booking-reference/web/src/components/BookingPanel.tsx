@@ -7,14 +7,16 @@
 
 import { useState, type CSSProperties, type FormEvent } from 'react';
 
-import type { Activity, Booking, Slot } from '../api';
-import { dayAndMonth, fullWeekdayName, minutesLabel, shortTime } from '../dates';
+import type { Activity, BookingCreated, Slot } from '../api';
+import { bookingLinkUrl } from '../bookingLinks';
+import type { BookingLink } from '../bookingLinks';
+import { dayAndMonth, fullWeekdayName, minutesLabel, shortTime, slotsLabel } from '../dates';
 import { CalendarIcon, CheckIcon } from './Icons';
 
 interface Props {
   activity: Activity | null;
-  slot: Slot | null;
-  confirmed: Booking | null;
+  slots: Slot[];
+  confirmed: BookingCreated[] | null;
   isSending: boolean;
   guestName: string;
   guestEmail: string;
@@ -22,23 +24,24 @@ interface Props {
   onGuestEmailChange: (value: string) => void;
   onSubmit: () => void;
   onReset: () => void;
+  onCopyLink: (link: BookingLink) => void;
 }
 
 export function BookingPanel(props: Props) {
-  const { activity, slot, confirmed, isSending } = props;
+  const { activity, slots, confirmed, isSending } = props;
   const [wasSubmitted, setWasSubmitted] = useState(false);
 
   if (confirmed !== null) {
-    return <Confirmation booking={confirmed} onReset={props.onReset} />;
+    return <Confirmation bookings={confirmed} onReset={props.onReset} onCopyLink={props.onCopyLink} />;
   }
 
-  if (slot === null || activity === null) {
+  if (slots.length === 0 || activity === null) {
     return (
       <div className="panel panel--hint" data-testid="booking-hint">
         <CalendarIcon className="panel__icon" />
         <h2 className="panel__title">Выберите время</h2>
         <p className="panel__text">
-          Нажмите на свободный слот в календаре. Здесь появится форма записи.
+          Выберите один или несколько свободных слотов в календаре. Здесь появится форма записи.
         </p>
       </div>
     );
@@ -46,6 +49,7 @@ export function BookingPanel(props: Props) {
 
   const nameIsEmpty = props.guestName.trim() === '';
   const emailIsWrong = !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(props.guestEmail);
+  const slot = slots[0];
 
   const handleSubmit = (event: FormEvent): void => {
     event.preventDefault();
@@ -56,27 +60,42 @@ export function BookingPanel(props: Props) {
   };
 
   return (
-    <form className="panel" onSubmit={handleSubmit} noValidate data-testid="booking-form">
-      <h2 className="panel__title">Запись на встречу</h2>
+    <form className="panel" id="booking" onSubmit={handleSubmit} noValidate data-testid="booking-form">
+      <h2 className="panel__title">{slots.length === 1 ? 'Запись на встречу' : `Запись на ${slotsLabel(slots.length)}`}</h2>
 
       <dl className="summary" style={{ '--activity-color': activity.color } as CSSProperties}>
         <div className="summary__row">
           <dt>Активность</dt>
           <dd>{activity.name}</dd>
         </div>
-        <div className="summary__row">
-          <dt>День</dt>
-          <dd>
-            {fullWeekdayName(slot.date)}, {dayAndMonth(slot.date)}
-          </dd>
-        </div>
-        <div className="summary__row">
-          <dt>Время</dt>
-          <dd className="summary__time">
-            {shortTime(slot.start_time)} – {shortTime(slot.end_time)}
-            <span className="summary__duration">{minutesLabel(activity.duration_minutes)}</span>
-          </dd>
-        </div>
+        {slots.length === 1 ? (
+          <>
+            <div className="summary__row">
+              <dt>День</dt>
+              <dd>{fullWeekdayName(slot.date)}, {dayAndMonth(slot.date)}</dd>
+            </div>
+            <div className="summary__row">
+              <dt>Время</dt>
+              <dd className="summary__time">
+                {shortTime(slot.start_time)} – {shortTime(slot.end_time)}
+                <span className="summary__duration">{minutesLabel(activity.duration_minutes)}</span>
+              </dd>
+            </div>
+          </>
+        ) : (
+          <div className="summary__row">
+            <dt>Выбрано</dt>
+            <dd>
+              <ul className="booking-slots">
+                {slots.map((item) => (
+                  <li key={`${item.date}-${item.start_time}`}>
+                    {dayAndMonth(item.date)}, {shortTime(item.start_time)} – {shortTime(item.end_time)}
+                  </li>
+                ))}
+              </ul>
+            </dd>
+          </div>
+        )}
       </dl>
 
       <div className="field">
@@ -119,32 +138,76 @@ export function BookingPanel(props: Props) {
         <p className="field__hint" id="guest-email-hint">
           {wasSubmitted && emailIsWrong
             ? 'Проверьте адрес: он должен быть вида ivan@example.com'
-            : 'По этому адресу вы найдёте свои брони. Регистрация не нужна.'}
+            : 'Контактный адрес. Для доступа к брони сохраните секретную ссылку.'}
         </p>
       </div>
 
       <button type="submit" className="button button--primary" disabled={isSending}>
-        {isSending ? 'Отправляем…' : 'Забронировать'}
+        {isSending ? 'Отправляем…' : slots.length === 1 ? 'Забронировать' : `Забронировать ${slotsLabel(slots.length)}`}
       </button>
     </form>
   );
 }
 
-function Confirmation({ booking, onReset }: { booking: Booking; onReset: () => void }) {
+function Confirmation({
+  bookings,
+  onReset,
+  onCopyLink,
+}: {
+  bookings: BookingCreated[];
+  onReset: () => void;
+  onCopyLink: (link: BookingLink) => void;
+}) {
+  const single = bookings.length === 1;
   return (
     <div className="panel panel--done" data-testid="booking-confirmation">
       <span className="panel__badge" aria-hidden="true">
         <CheckIcon />
       </span>
-      <h2 className="panel__title">Вы записаны</h2>
-      <p className="panel__text">
-        {booking.activity_name}, {fullWeekdayName(booking.date).toLowerCase()}{' '}
-        {dayAndMonth(booking.date)}, {shortTime(booking.start_time)} –{' '}
-        {shortTime(booking.end_time)}.
-      </p>
+      <h2 className="panel__title">{single ? 'Вы записаны' : `Вы записаны на ${slotsLabel(bookings.length)}`}</h2>
+      {bookings.map(({ booking }) => (
+        <p className="panel__text" key={booking.id}>
+          {booking.activity_name}, {fullWeekdayName(booking.date).toLowerCase()}{' '}
+          {dayAndMonth(booking.date)}, {shortTime(booking.start_time)} –{' '}
+          {shortTime(booking.end_time)}.
+        </p>
+      ))}
       <p className="panel__text panel__text--muted">
-        Подтверждение на почту мы не отправляем: бронь видна в списке ниже.
+        Подтверждение на почту мы не отправляем. Сохраните {single ? 'ссылку ниже' : 'ссылки ниже'}.
       </p>
+      {bookings.map(({ booking, access_token: token }, index) => {
+        const link = bookingLinkUrl({ id: booking.id, token });
+        return (
+          <div className="field" key={booking.id}>
+            <label className="field__label" htmlFor={`booking-link-${booking.id}`}>
+              {single ? 'Секретная ссылка на бронь' : `Секретная ссылка на бронь ${index + 1}`}
+            </label>
+            <input
+              id={`booking-link-${booking.id}`}
+              className="field__input"
+              type="text"
+              value={link}
+              readOnly
+              onFocus={(event) => event.currentTarget.select()}
+            />
+            {single && <p className="field__hint">
+              Сохраните ссылку: по ней можно открыть и отменить бронь на другом устройстве.
+              Любой, у кого есть ссылка, получит доступ к брони.
+            </p>}
+            <button
+              type="button"
+              className="button button--small"
+              onClick={() => onCopyLink({ id: booking.id, token })}
+            >
+              Скопировать ссылку{single ? '' : ` ${index + 1}`}
+            </button>
+            <a className="button button--small" href={link}>
+              Открыть страницу брони{single ? '' : ` ${index + 1}`}
+            </a>
+          </div>
+        );
+      })}
+      {!single && <p className="field__hint">Каждая ссылка даёт доступ к отдельной брони. Сохраните все ссылки.</p>}
       <button type="button" className="button" onClick={onReset}>
         Записаться ещё раз
       </button>

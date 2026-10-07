@@ -19,17 +19,26 @@ export const MAX_RANGE_DAYS = 60;
 
 const MILLISECONDS_IN_DAY = 24 * 60 * 60 * 1000;
 
-/** Переводит время в число минут от полуночи: «09:30:00» в 570. */
+/** Переводит время в число минут от полуночи, сохраняя секунды. */
 export function timeToMinutes(value: string): number {
-  const [hours, minutes] = value.split(':').map(Number);
-  return hours * 60 + minutes;
+  return timeToSeconds(value) / 60;
 }
 
 /** Обратный перевод: 570 в «09:30:00». */
 export function minutesToTime(minutes: number): string {
-  const hours = Math.floor(minutes / 60);
-  const rest = minutes % 60;
-  return `${pad(hours)}:${pad(rest)}:00`;
+  return secondsToTime(Math.round(minutes * 60));
+}
+
+function timeToSeconds(value: string): number {
+  const [hours, minutes, seconds] = value.split(':').map(Number);
+  return hours * 3600 + minutes * 60 + seconds;
+}
+
+function secondsToTime(value: number): string {
+  const hours = Math.floor(value / 3600);
+  const minutes = Math.floor((value % 3600) / 60);
+  const seconds = value % 60;
+  return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
 }
 
 /** День недели по ISO: 1 это понедельник, 7 это воскресенье. */
@@ -73,14 +82,14 @@ export function timesForSchedule(
   schedule: Schedule,
   durationMinutes: number,
 ): Array<{ start_time: string; end_time: string }> {
-  const windowStart = timeToMinutes(schedule.start_time);
-  const windowEnd = timeToMinutes(schedule.end_time);
+  const windowStart = timeToSeconds(schedule.start_time);
+  const windowEnd = timeToSeconds(schedule.end_time);
 
   const times: Array<{ start_time: string; end_time: string }> = [];
-  for (let start = windowStart; start + durationMinutes <= windowEnd; start += schedule.step_minutes) {
+  for (let start = windowStart; start + durationMinutes * 60 <= windowEnd; start += schedule.step_minutes * 60) {
     times.push({
-      start_time: minutesToTime(start),
-      end_time: minutesToTime(start + durationMinutes),
+      start_time: secondsToTime(start),
+      end_time: secondsToTime(start + durationMinutes * 60),
     });
   }
   return times;

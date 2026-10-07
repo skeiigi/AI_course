@@ -19,11 +19,14 @@ function toDate(date: string): Date {
   return new Date(`${date}T00:00:00Z`);
 }
 
-/** Сегодняшняя дата в виде «ГГГГ-ММ-ДД» по местному календарю пользователя. */
+/** Сегодняшняя дата в часовом поясе сервиса. */
 export function today(): string {
-  const now = new Date();
-  const local = new Date(now.getTime() - now.getTimezoneOffset() * 60 * 1000);
-  return local.toISOString().slice(0, 10);
+  return new Intl.DateTimeFormat('sv-SE', {
+    timeZone: 'Asia/Krasnoyarsk',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date());
 }
 
 export function addDays(date: string, days: number): string {
@@ -68,8 +71,20 @@ export function weekTitle(weekStart: string): string {
   return `${dayAndMonth(weekStart)} – ${dayAndMonth(weekEnd)} ${year}`;
 }
 
-/** «10:00:00» в «10:00». Секунды в интерфейсе не нужны. */
-export const shortTime = (time: string): string => time.slice(0, 5);
+/** Скрываем нулевые секунды, но показываем ненулевые, чтобы не искажать время записи. */
+export const shortTime = (time: string): string =>
+  time.endsWith(':00') ? time.slice(0, 5) : time;
+
+/** Время сообщения показываем в том же часовом поясе, что и бронирование. */
+export function messageDateTime(value: string): string {
+  return new Intl.DateTimeFormat('ru-RU', {
+    timeZone: 'Asia/Krasnoyarsk',
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(value));
+}
 
 /** Склонение слова «минута»: 30 минут, 45 минут, 1 минута. */
 export function minutesLabel(minutes: number): string {

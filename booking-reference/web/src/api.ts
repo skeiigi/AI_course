@@ -48,6 +48,40 @@ export interface BookingCreate {
   guest_email: string;
 }
 
+export interface BookingCreated {
+  booking: Booking;
+  access_token: string;
+}
+
+export interface BookingBatchCreate {
+  activity_id: number;
+  slots: Array<{ date: string; start_time: string }>;
+  guest_name: string;
+  guest_email: string;
+}
+
+export interface BookingBatchCreated {
+  bookings: BookingCreated[];
+}
+
+export interface BookingMessage {
+  id: number;
+  booking_id: number;
+  sender_name: string;
+  body: string;
+  created_at: string;
+}
+
+export interface BookingChat {
+  messages: BookingMessage[];
+  can_post: boolean;
+}
+
+export interface BookingMessageCreate {
+  sender_name: string;
+  body: string;
+}
+
 /**
  * Ошибка, которую вернул сервис. Поле code машиночитаемое, message
  * уже написано по-русски и годится для показа пользователю.
@@ -68,9 +102,13 @@ const NETWORK_MESSAGE = 'Сервис не отвечает. Проверьте,
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   let response: Response;
   try {
+    const headers = new Headers(init?.headers);
+    if (init?.body !== undefined) {
+      headers.set('content-type', 'application/json');
+    }
     response = await fetch(path, {
       ...init,
-      headers: init?.body === undefined ? undefined : { 'content-type': 'application/json' },
+      headers,
     });
   } catch {
     // Сюда попадаем, если сервис не запущен или пропала сеть.
@@ -103,14 +141,34 @@ export const api = {
     return request<Slot[]>(`/api/slots?${query}`, { signal });
   },
 
-  listBookings: (guestEmail: string, signal?: AbortSignal) => {
-    const query = new URLSearchParams({ guest_email: guestEmail });
-    return request<Booking[]>(`/api/bookings?${query}`, { signal });
-  },
-
   createBooking: (payload: BookingCreate) =>
-    request<Booking>('/api/bookings', { method: 'POST', body: JSON.stringify(payload) }),
+    request<BookingCreated>('/api/bookings', { method: 'POST', body: JSON.stringify(payload) }),
 
-  cancelBooking: (bookingId: number) =>
-    request<Booking>(`/api/bookings/${bookingId}/cancel`, { method: 'POST' }),
+  createBookings: (payload: BookingBatchCreate) =>
+    request<BookingBatchCreated>('/api/bookings/batch', { method: 'POST', body: JSON.stringify(payload) }),
+
+  getBooking: (bookingId: number, token: string, signal?: AbortSignal) =>
+    request<Booking>(`/api/bookings/${bookingId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+      signal,
+    }),
+
+  cancelBooking: (bookingId: number, token: string) =>
+    request<Booking>(`/api/bookings/${bookingId}/cancel`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  getBookingChat: (bookingId: number, token: string, signal?: AbortSignal) =>
+    request<BookingChat>(`/api/bookings/${bookingId}/messages`, {
+      headers: { Authorization: `Bearer ${token}` },
+      signal,
+    }),
+
+  createBookingMessage: (bookingId: number, token: string, payload: BookingMessageCreate) =>
+    request<BookingMessage>(`/api/bookings/${bookingId}/messages`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify(payload),
+    }),
 };
